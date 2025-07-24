@@ -68,9 +68,11 @@ export default function Home() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+        <div className="w-[300px] h-[300px] bg-gray-100 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-600 text-lg font-medium">Loading...</p>
+          </div>
         </div>
       </div>
     );
@@ -79,59 +81,60 @@ export default function Home() {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 font-medium mb-2">Error loading pool hours</p>
-          <p className="text-gray-600 text-sm">{error}</p>
+        <div className="w-[300px] h-[300px] bg-gray-100 flex items-center justify-center">
+          <div className="text-center px-4">
+            <p className="text-red-600 font-bold text-xl mb-2">Error</p>
+            <p className="text-gray-600 text-sm">{error}</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`min-h-screen ${getBackgroundColor(poolData?.isOpenNow)} transition-colors duration-500 flex items-center justify-center`}>
-      <div className="max-w-md mx-auto px-4">
-        {/* Timeline */}
-        {poolData?.hours && poolData.hours.length > 0 && (
-          <div className="space-y-3">
-            {poolData.hours.map((slot, index) => {
-              const slotStatus = isCurrentOrNextSlot(slot);
-              const isHighlighted = slotStatus === 'current' || slotStatus === 'next';
-              const isPast = slotStatus === null;
-              
-              return (
-                <div 
-                  key={index} 
-                  className={`flex items-center justify-between bg-white rounded-lg p-6 transition-all duration-300 ${
-                    isHighlighted 
-                      ? 'shadow-2xl border-2 border-blue-400' 
-                      : isPast
-                      ? 'shadow-lg opacity-40'
-                      : 'shadow-lg'
-                  }`}
-                >
-                  <div className="flex items-center min-w-0 flex-1 mr-4">
-                    <div className={`w-3 h-3 rounded-full mr-3 flex-shrink-0 ${
-                      slot.type === 'lap' ? 'bg-blue-500' : 'bg-green-500'
-                    }`}></div>
-                    <div className="flex flex-col">
-                      <span className="font-medium text-gray-800 capitalize truncate">
-                        {slot.type} Swim
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className={`w-[300px] h-[300px] ${getBackgroundColor(poolData?.isOpenNow)} transition-colors duration-500 p-4 overflow-y-auto`}>
+        <div className="text-white">
+          {poolData?.hours && poolData.hours.length > 0 && (
+            <div className="space-y-2">
+              {poolData.hours.map((slot, index) => {
+                const slotStatus = isCurrentOrNextSlot(slot);
+                const isHighlighted = slotStatus === 'current' || slotStatus === 'next';
+                const isPast = slotStatus === null;
+                const isLap = slot.type === 'lap';
+                
+                return (
+                  <div 
+                    key={index} 
+                    className={`p-2 rounded border-l-4 ${
+                      isHighlighted 
+                        ? 'bg-white bg-opacity-20 border-l-yellow-300 font-bold text-xl' 
+                        : isPast 
+                        ? 'bg-white bg-opacity-10 border-l-gray-400 opacity-50 text-base' 
+                        : isLap
+                        ? 'bg-blue-600 bg-opacity-30 border-l-blue-500 font-medium text-base'
+                        : 'bg-orange-500 bg-opacity-30 border-l-orange-400 font-medium text-base'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="capitalize font-bold">
+                        {slot.type === 'lap' ? 'LAP' : 'REC'}
                       </span>
-                      {isHighlighted && (
-                        <span className="text-xs text-blue-600 font-medium">
-                          {slotStatus === 'current' ? 'Current' : 'Next'}
-                        </span>
-                      )}
+                      <span>{formatTime(slot.start)}-{formatTime(slot.end)}</span>
                     </div>
+                    {isHighlighted && (
+                      <div className="text-center mt-1">
+                        <span className="text-yellow-200 font-bold text-sm">
+                          {slotStatus === 'current' ? 'NOW' : 'NEXT'}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <span className="font-semibold text-gray-900 flex-shrink-0">
-                    {formatTime(slot.start)} - {formatTime(slot.end)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
