@@ -117,14 +117,23 @@ function convertToTimestamps(timeStrings, type) {
   const today = moment().tz('America/Los_Angeles').startOf('day');
   const timestamps = [];
   
+  console.log('// DEBUG PRINT - convertToTimestamps - today:', today.format('YYYY-MM-DD'));
+  console.log('// DEBUG PRINT - convertToTimestamps - timeStrings:', timeStrings);
+  console.log('// DEBUG PRINT - convertToTimestamps - type:', type);
+  
   timeStrings.forEach(timeString => {
     const timeRange = parseTimeRange(timeString);
     if (timeRange) {
       const { startTime, endTime } = timeRange;
       
+      console.log('// DEBUG PRINT - convertToTimestamps - parsed timeRange:', timeRange);
+      
       // Create full datetime objects for today
       const startDateTime = moment.tz(today.format('YYYY-MM-DD') + ' ' + startTime, 'YYYY-MM-DD HH:mm', 'America/Los_Angeles');
       const endDateTime = moment.tz(today.format('YYYY-MM-DD') + ' ' + endTime, 'YYYY-MM-DD HH:mm', 'America/Los_Angeles');
+      
+      console.log('// DEBUG PRINT - convertToTimestamps - startDateTime:', startDateTime.format('YYYY-MM-DD HH:mm:ss'));
+      console.log('// DEBUG PRINT - convertToTimestamps - endDateTime:', endDateTime.format('YYYY-MM-DD HH:mm:ss'));
       
       timestamps.push({
         start: startDateTime.toISOString(),
@@ -136,6 +145,7 @@ function convertToTimestamps(timeStrings, type) {
     }
   });
   
+  console.log('// DEBUG PRINT - convertToTimestamps - final timestamps:', JSON.stringify(timestamps, null, 2));
   return timestamps;
 }
 
@@ -183,8 +193,8 @@ function parseTimeRange(timeRange) {
   const match = timeRange.match(/(\d{1,2}:\d{2}(?:am|pm))\s*-\s*(\d{1,2}:\d{2}(?:am|pm))/i);
   if (!match) return null;
   
-  const startTime = moment(match[1], 'h:mma').format('HH:mm');
-  const endTime = moment(match[2], 'h:mma').format('HH:mm');
+  const startTime = moment.tz(match[1], 'h:mma', 'America/Los_Angeles').format('HH:mm');
+  const endTime = moment.tz(match[2], 'h:mma', 'America/Los_Angeles').format('HH:mm');
   
   return { startTime, endTime };
 }
@@ -536,26 +546,39 @@ function checkIfOpenNow(timestampedHours) {
   const currentTime = moment().tz('America/Los_Angeles');
   const currentDay = moment().tz('America/Los_Angeles').format('dddd');
 
+  console.log('// DEBUG PRINT - checkIfOpenNow - currentTime:', currentTime.format('YYYY-MM-DD HH:mm:ss'));
+  console.log('// DEBUG PRINT - checkIfOpenNow - currentDay:', currentDay);
+  console.log('// DEBUG PRINT - checkIfOpenNow - timestampedHours:', JSON.stringify(timestampedHours, null, 2));
+
   // Find the time slots for the current day
   const todaySlots = timestampedHours.filter(slot => {
-    const slotDay = moment.tz(slot.start, 'YYYY-MM-DD HH:mm', 'America/Los_Angeles').format('dddd');
+    const slotDay = moment(slot.start).tz('America/Los_Angeles').format('dddd');
     return slotDay === currentDay;
   });
 
+  console.log('// DEBUG PRINT - checkIfOpenNow - todaySlots:', JSON.stringify(todaySlots, null, 2));
+
   if (todaySlots.length === 0) {
+    console.log('// DEBUG PRINT - checkIfOpenNow - No hours for today');
     return false; // No hours for today
   }
 
   // Check if the current time falls within any of the time slots
   for (const slot of todaySlots) {
-    const slotStartTime = moment.tz(slot.start, 'YYYY-MM-DD HH:mm', 'America/Los_Angeles');
-    const slotEndTime = moment.tz(slot.end, 'YYYY-MM-DD HH:mm', 'America/Los_Angeles');
+    const slotStartTime = moment(slot.start).tz('America/Los_Angeles');
+    const slotEndTime = moment(slot.end).tz('America/Los_Angeles');
+
+    console.log('// DEBUG PRINT - checkIfOpenNow - slotStartTime:', slotStartTime.format('YYYY-MM-DD HH:mm:ss'));
+    console.log('// DEBUG PRINT - checkIfOpenNow - slotEndTime:', slotEndTime.format('YYYY-MM-DD HH:mm:ss'));
+    console.log('// DEBUG PRINT - checkIfOpenNow - isBetween:', currentTime.isBetween(slotStartTime, slotEndTime, 'minute', '[]'));
 
     if (currentTime.isBetween(slotStartTime, slotEndTime, 'minute', '[]')) {
+      console.log('// DEBUG PRINT - checkIfOpenNow - Pool is OPEN');
       return true; // Current time is within a time slot
     }
   }
 
+  console.log('// DEBUG PRINT - checkIfOpenNow - Pool is CLOSED');
   return false; // Current time is not within any time slot
 } 
 

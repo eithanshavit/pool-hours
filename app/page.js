@@ -44,7 +44,11 @@ export default function Home() {
   };
 
   const getBackgroundColor = (isOpen) => {
-    return isOpen ? 'bg-green-400' : 'bg-red-500';
+    return isOpen ? 'bg-green-300' : 'bg-red-300';
+  };
+
+  const getTextColor = (isOpen) => {
+    return isOpen ? 'text-gray-800' : 'text-white';
   };
 
   const isCurrentOrNextSlot = (slot) => {
@@ -67,8 +71,8 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="w-[300px] h-[300px] bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+        <div className="w-[300px] h-[300px] bg-white rounded-3xl shadow-lg flex items-center justify-center p-6">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500 mx-auto mb-4"></div>
             <p className="text-gray-600 text-lg font-medium">Loading...</p>
@@ -80,8 +84,8 @@ export default function Home() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="w-[300px] h-[300px] bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+        <div className="w-[300px] h-[300px] bg-white rounded-3xl shadow-lg flex items-center justify-center p-6">
           <div className="text-center px-4">
             <p className="text-red-600 font-bold text-xl mb-2">Error</p>
             <p className="text-gray-600 text-sm">{error}</p>
@@ -92,9 +96,9 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className={`w-[300px] h-[300px] ${getBackgroundColor(poolData?.isOpenNow)} transition-colors duration-500 p-4 overflow-y-auto`}>
-        <div className="text-white">
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <div className={`w-[300px] h-[300px] ${getBackgroundColor(poolData?.isOpenNow)} rounded-3xl shadow-lg transition-colors duration-500 p-6 overflow-y-auto`}>
+        <div className={getTextColor(poolData?.isOpenNow)}>
           {poolData?.hours && poolData.hours.length > 0 && (
             <div className="space-y-2">
               {poolData.hours.map((slot, index) => {
@@ -106,14 +110,22 @@ export default function Home() {
                 return (
                   <div 
                     key={index} 
-                    className={`p-2 rounded border-l-4 ${
+                    className={`p-2 rounded-md border-l-4 ${
                       isHighlighted 
-                        ? 'bg-white bg-opacity-20 border-l-yellow-300 font-bold text-xl' 
+                        ? poolData?.isOpenNow
+                          ? `bg-white bg-opacity-40 ${isLap ? 'border-l-blue-500' : 'border-l-orange-500'} font-bold text-xl text-gray-900` 
+                          : `bg-white bg-opacity-20 ${isLap ? 'border-l-blue-400' : 'border-l-orange-400'} font-bold text-xl`
                         : isPast 
-                        ? 'bg-white bg-opacity-10 border-l-gray-400 opacity-50 text-base' 
+                        ? poolData?.isOpenNow
+                          ? `bg-white bg-opacity-20 ${isLap ? 'border-l-blue-300' : 'border-l-orange-300'} opacity-50 text-base text-gray-700`
+                          : `bg-white bg-opacity-10 ${isLap ? 'border-l-blue-200' : 'border-l-orange-200'} opacity-50 text-base`
                         : isLap
-                        ? 'bg-blue-600 bg-opacity-30 border-l-blue-500 font-medium text-base'
-                        : 'bg-orange-500 bg-opacity-30 border-l-orange-400 font-medium text-base'
+                        ? poolData?.isOpenNow
+                          ? 'bg-white bg-opacity-30 border-l-blue-600 font-medium text-base text-gray-900'
+                          : 'bg-blue-600 bg-opacity-30 border-l-blue-500 font-medium text-base'
+                        : poolData?.isOpenNow
+                          ? 'bg-white bg-opacity-30 border-l-orange-600 font-medium text-base text-gray-900'
+                          : 'bg-orange-500 bg-opacity-30 border-l-orange-400 font-medium text-base'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -124,7 +136,9 @@ export default function Home() {
                     </div>
                     {isHighlighted && (
                       <div className="text-center mt-1">
-                        <span className="text-yellow-200 font-bold text-sm">
+                        <span className={`font-bold text-sm ${
+                          poolData?.isOpenNow ? 'text-yellow-700' : 'text-yellow-200'
+                        }`}>
                           {slotStatus === 'current' ? 'NOW' : 'NEXT'}
                         </span>
                       </div>
