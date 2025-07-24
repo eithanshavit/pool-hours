@@ -4,6 +4,9 @@ import moment from 'moment-timezone';
 
 /**
  * API route to scrape pool hours from Highlands Recreation District
+ * 
+ * All time calculations are performed in America/Los_Angeles timezone (PST/PDT)
+ * to ensure consistency regardless of the server's timezone.
  */
 export async function GET() {
   try {
@@ -17,7 +20,7 @@ export async function GET() {
       prettified: 'Close - Unable to retrieve pool hours',
       isOpenNow: false,
       error: `Failed to scrape pool hours: ${error.message}`,
-      timestamp: new Date().toISOString()
+      timestamp: moment().tz('America/Los_Angeles').toISOString()
     }, { status: 500 });
   }
 }
@@ -67,7 +70,7 @@ async function scrapePoolHours() {
       prettified: prettifiedHours,
       isOpenNow: isOpenNow,
       error: null,
-      timestamp: new Date().toISOString()
+      timestamp: moment().tz('America/Los_Angeles').toISOString()
     };
     
   } catch (error) {
@@ -77,7 +80,7 @@ async function scrapePoolHours() {
         prettified: 'Unable to connect to pool website',
         isOpenNow: false,
         error: 'Unable to connect to the pool website. Please check your internet connection.',
-        timestamp: new Date().toISOString()
+        timestamp: moment().tz('America/Los_Angeles').toISOString()
       };
     } else if (error.code === 'ENOTFOUND') {
       return {
@@ -85,7 +88,7 @@ async function scrapePoolHours() {
         prettified: 'Pool website temporarily unavailable',
         isOpenNow: false,
         error: 'Pool website not found. The website may be temporarily unavailable.',
-        timestamp: new Date().toISOString()
+        timestamp: moment().tz('America/Los_Angeles').toISOString()
       };
     } else if (error.code === 'ETIMEDOUT') {
       return {
@@ -93,7 +96,7 @@ async function scrapePoolHours() {
         prettified: 'Close - Pool website is taking too long to respond',
         isOpenNow: false,
         error: 'Request timed out. The pool website is taking too long to respond.',
-        timestamp: new Date().toISOString()
+        timestamp: moment().tz('America/Los_Angeles').toISOString()
       };
     } else {
       return {
@@ -101,7 +104,7 @@ async function scrapePoolHours() {
         prettified: 'Close - Unable to retrieve pool hours',
         isOpenNow: false,
         error: `Failed to retrieve pool hours: ${error.message}`,
-        timestamp: new Date().toISOString()
+        timestamp: moment().tz('America/Los_Angeles').toISOString()
       };
     }
   }
@@ -114,6 +117,7 @@ async function scrapePoolHours() {
  * @returns {Array} Array of objects with start and end timestamps
  */
 function convertToTimestamps(timeStrings, type) {
+  // Ensure we're working in PST/PDT timezone consistently
   const today = moment().tz('America/Los_Angeles').startOf('day');
   const timestamps = [];
   
@@ -471,6 +475,7 @@ function normalizeDayName(dayName) {
     'wed': 'Wednesday',
     'wednesday': 'Wednesday',
     'thu': 'Thursday',
+    'thr': 'Thursday',
     'thursday': 'Thursday',
     'fri': 'Friday',
     'friday': 'Friday',
@@ -543,6 +548,7 @@ function getDayRange(startDay, endDay) {
  * @returns {boolean} True if the pool is open, false otherwise.
  */
 function checkIfOpenNow(timestampedHours) {
+  // Ensure we're working in PST/PDT timezone consistently
   const currentTime = moment().tz('America/Los_Angeles');
   const currentDay = moment().tz('America/Los_Angeles').format('dddd');
 
@@ -589,7 +595,7 @@ function checkIfOpenNow(timestampedHours) {
  * @returns {string} Formatted time range string (e.g., "7:30am - 11:00am")
  */
 function formatTimeRange(start, end) {
-  // Parse ISO strings and convert to PST
+  // Parse ISO strings and ensure they're interpreted in PST/PDT timezone
   const startMoment = moment(start).tz('America/Los_Angeles');
   const endMoment = moment(end).tz('America/Los_Angeles');
 
