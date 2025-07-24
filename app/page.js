@@ -110,10 +110,10 @@ export default function Home() {
                 return (
                   <div 
                     key={index} 
-                    className={`p-2 rounded-md border-l-4 ${
+                    className={`p-2 rounded-xl border-l-4 ${
                       isHighlighted 
                         ? poolData?.isOpenNow
-                          ? `bg-white bg-opacity-40 ${isLap ? 'border-l-blue-500' : 'border-l-orange-500'} font-bold text-xl text-gray-900` 
+                          ? `bg-white bg-opacity-70 ${isLap ? 'border-l-blue-500' : 'border-l-orange-500'} font-bold text-xl text-gray-900` 
                           : `bg-white bg-opacity-20 ${isLap ? 'border-l-blue-400' : 'border-l-orange-400'} font-bold text-xl`
                         : isPast 
                         ? poolData?.isOpenNow
