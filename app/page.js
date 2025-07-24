@@ -47,6 +47,24 @@ export default function Home() {
     return isOpen ? 'bg-green-400' : 'bg-red-500';
   };
 
+  const isCurrentOrNextSlot = (slot) => {
+    const now = new Date();
+    const slotStart = new Date(slot.start);
+    const slotEnd = new Date(slot.end);
+    
+    // If current time is within the slot, it's current
+    if (now >= slotStart && now <= slotEnd) {
+      return 'current';
+    }
+    
+    // If current time is before the slot start, it's next
+    if (now < slotStart) {
+      return 'next';
+    }
+    
+    return null;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -75,21 +93,43 @@ export default function Home() {
         {/* Timeline */}
         {poolData?.hours && poolData.hours.length > 0 && (
           <div className="space-y-3">
-            {poolData.hours.map((slot, index) => (
-              <div key={index} className="flex items-center justify-between bg-white rounded-lg shadow-lg p-6">
-                <div className="flex items-center min-w-0 flex-1 mr-4">
-                  <div className={`w-3 h-3 rounded-full mr-3 flex-shrink-0 ${
-                    slot.type === 'lap' ? 'bg-blue-500' : 'bg-green-500'
-                  }`}></div>
-                  <span className="font-medium text-gray-800 capitalize truncate">
-                    {slot.type} Swim
+            {poolData.hours.map((slot, index) => {
+              const slotStatus = isCurrentOrNextSlot(slot);
+              const isHighlighted = slotStatus === 'current' || slotStatus === 'next';
+              const isPast = slotStatus === null;
+              
+              return (
+                <div 
+                  key={index} 
+                  className={`flex items-center justify-between bg-white rounded-lg p-6 transition-all duration-300 ${
+                    isHighlighted 
+                      ? 'shadow-2xl border-2 border-blue-400' 
+                      : isPast
+                      ? 'shadow-lg opacity-40'
+                      : 'shadow-lg'
+                  }`}
+                >
+                  <div className="flex items-center min-w-0 flex-1 mr-4">
+                    <div className={`w-3 h-3 rounded-full mr-3 flex-shrink-0 ${
+                      slot.type === 'lap' ? 'bg-blue-500' : 'bg-green-500'
+                    }`}></div>
+                    <div className="flex flex-col">
+                      <span className="font-medium text-gray-800 capitalize truncate">
+                        {slot.type} Swim
+                      </span>
+                      {isHighlighted && (
+                        <span className="text-xs text-blue-600 font-medium">
+                          {slotStatus === 'current' ? 'Current' : 'Next'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <span className="font-semibold text-gray-900 flex-shrink-0">
+                    {formatTime(slot.start)} - {formatTime(slot.end)}
                   </span>
                 </div>
-                <span className="font-semibold text-gray-900 flex-shrink-0">
-                  {formatTime(slot.start)} - {formatTime(slot.end)}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
