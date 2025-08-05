@@ -5,6 +5,7 @@ export const metadata = {
   description: 'Real-time pool availability at Highlands Recreation District',
   icons: {
     icon: '/icon.png',
+    apple: '/apple-touch-icon.png',
   },
 }
 
