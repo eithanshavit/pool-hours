@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import TodayHighlight from './TodayHighlight';
-import WeeklyCalendar from './WeeklyCalendar';
+import { useState, useEffect, useRef } from "react";
+import TodayHighlight from "./TodayHighlight";
+import WeeklyCalendar from "./WeeklyCalendar";
 
 /**
  * CombinedCalendarView component for single-page layout
@@ -14,6 +14,10 @@ import WeeklyCalendar from './WeeklyCalendar';
  * @returns {JSX.Element}
  */
 export default function CombinedCalendarView({ currentTime }) {
+  // Refs for smooth scrolling to sections
+  const todayRef = useRef(null);
+  const thisWeekRef = useRef(null);
+  const nextWeekRef = useRef(null);
   // State for today's data
   const [todayData, setTodayData] = useState(null);
   const [todayLoading, setTodayLoading] = useState(true);
@@ -34,16 +38,16 @@ export default function CombinedCalendarView({ currentTime }) {
     try {
       setTodayLoading(true);
       setTodayError(null);
-      
-      const response = await fetch('/api/pool-hours');
+
+      const response = await fetch("/api/pool-hours");
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       setTodayData(data);
     } catch (error) {
-      console.error('Error fetching today\'s data:', error);
+      console.error("Error fetching today's data:", error);
       setTodayError(error.message);
     } finally {
       setTodayLoading(false);
@@ -55,12 +59,14 @@ export default function CombinedCalendarView({ currentTime }) {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await fetch(`/api/weekly-hours?weekOffset=${weekOffset}`);
+
+      const response = await fetch(
+        `/api/weekly-hours?weekOffset=${weekOffset}`
+      );
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       setData(data);
     } catch (error) {
@@ -88,6 +94,17 @@ export default function CombinedCalendarView({ currentTime }) {
     fetchNextWeekData();
   };
 
+  // Smooth scroll to section
+  const scrollToSection = (ref) => {
+    if (ref.current) {
+      ref.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+        inline: "nearest",
+      });
+    }
+  };
+
   // Initial data fetch
   useEffect(() => {
     fetchTodayData();
@@ -107,40 +124,20 @@ export default function CombinedCalendarView({ currentTime }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-6 px-4">
-      <div className="max-w-7xl mx-auto space-y-12">
-        
-        {/* Header Section */}
-        <div className="text-center">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 pb-4">
+      <div className="max-w-6xl mx-auto">
+        {/* Compact Header Section */}
+        <div className="text-center px-2 mb-3 sm:mb-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
             Pool Schedule
           </h1>
-          <p className="text-gray-600 text-lg">
-            Highlands Recreation Center
-          </p>
-          
-          {/* Refresh Button */}
-          <div className="mt-4">
-            <button
-              onClick={refreshAllData}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md hover:shadow-lg"
-              disabled={todayLoading || thisWeekLoading || nextWeekLoading}
-            >
-              <svg 
-                className={`w-4 h-4 ${(todayLoading || thisWeekLoading || nextWeekLoading) ? 'animate-spin' : ''}`} 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Refresh All
-            </button>
-          </div>
+          <p className="text-gray-600 text-sm">Highlands Recreation Center</p>
+
+          {/* Compact Navigation & Refresh */}
         </div>
 
         {/* Today's Highlight Section */}
-        <section className="space-y-4">
+        <section ref={todayRef} className="px-2 mb-4 animate-fade-in">
           <TodayHighlight
             poolData={todayData}
             loading={todayLoading}
@@ -150,15 +147,8 @@ export default function CombinedCalendarView({ currentTime }) {
           />
         </section>
 
-        {/* Visual Separator */}
-        <div className="flex items-center justify-center">
-          <div className="flex-grow h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
-          <div className="px-4 text-gray-500 text-sm font-medium">Weekly Schedule</div>
-          <div className="flex-grow h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
-        </div>
-
         {/* This Week Section */}
-        <section className="space-y-6">
+        <section ref={thisWeekRef} className="mb-4 animate-fade-in">
           <WeeklyCalendar
             weekData={thisWeekData?.weekData}
             currentTime={currentTime}
@@ -171,15 +161,8 @@ export default function CombinedCalendarView({ currentTime }) {
           />
         </section>
 
-        {/* Visual Separator */}
-        <div className="flex items-center justify-center">
-          <div className="flex-grow h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
-          <div className="px-4 text-gray-500 text-sm font-medium">Next Week</div>
-          <div className="flex-grow h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
-        </div>
-
         {/* Next Week Section */}
-        <section className="space-y-6">
+        <section ref={nextWeekRef} className="mb-4 animate-fade-in">
           <WeeklyCalendar
             weekData={nextWeekData?.weekData}
             currentTime={currentTime}
@@ -192,23 +175,19 @@ export default function CombinedCalendarView({ currentTime }) {
           />
         </section>
 
-        {/* Footer Section */}
-        <footer className="text-center py-8">
-          <div className="text-sm text-gray-500 space-y-2">
-            <div>
-              Last updated: {currentTime.toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true,
-                timeZone: 'America/Los_Angeles'
-              })} PST
-            </div>
-            <div>
-              Data refreshes automatically every 5 minutes
-            </div>
+        {/* Compact Footer Section */}
+        <footer className="text-center py-3 px-2">
+          <div className="text-xs text-gray-500">
+            Updated:{" "}
+            {currentTime.toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+              timeZone: "America/Los_Angeles",
+            })}{" "}
+            PST • Auto-refresh every 5 min
           </div>
         </footer>
-
       </div>
     </div>
   );

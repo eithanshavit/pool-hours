@@ -36,8 +36,13 @@ export default function Home() {
         />
       </div>
 
-      {/* Content based on current view */}
-      <div id={`${currentView}-view`} role="tabpanel" aria-labelledby={`${currentView}-tab`}>
+      {/* Content based on current view - with top padding to avoid toggle overlap */}
+      <div 
+        id={`${currentView}-view`} 
+        role="tabpanel" 
+        aria-labelledby={`${currentView}-tab`}
+        className="pt-16 sm:pt-20"
+      >
         {currentView === 'daily' ? (
           <DailyView
             currentTime={currentTime}

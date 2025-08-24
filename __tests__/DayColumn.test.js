@@ -42,7 +42,7 @@ describe('DayColumn Component', () => {
       />
     );
     
-    expect(screen.getByText('Monday')).toBeInTheDocument();
+    expect(screen.getByText('Mon')).toBeInTheDocument(); // Changed to abbreviated form
     expect(screen.getByText('Jan 15')).toBeInTheDocument();
   });
 
@@ -55,7 +55,7 @@ describe('DayColumn Component', () => {
       />
     );
     
-    // Check for LAP and REC labels
+    // Check for LAP and REC labels (full form for better readability)
     expect(screen.getAllByText('LAP')).toHaveLength(2);
     expect(screen.getAllByText('REC')).toHaveLength(1);
   });
@@ -151,7 +151,7 @@ describe('DayColumn Component', () => {
     );
     
     expect(screen.getByText('No Hours')).toBeInTheDocument();
-    expect(screen.getByText('Pool closed')).toBeInTheDocument();
+    expect(screen.getByText('Pool Closed')).toBeInTheDocument(); // Updated text
   });
 
   test('handles null dayData gracefully', () => {
@@ -175,8 +175,8 @@ describe('DayColumn Component', () => {
       />
     );
     
-    const lapSlots = screen.getAllByText('LAP');
-    const recSlots = screen.getAllByText('REC');
+    const lapSlots = screen.getAllByText('LAP'); // Full form for better readability
+    const recSlots = screen.getAllByText('REC'); // Full form for better readability
     
     // Check that LAP slots have blue styling
     lapSlots.forEach(slot => {
@@ -231,8 +231,8 @@ describe('DayColumn Component', () => {
       />
     );
     
-    // Check for responsive width classes on the container
-    const container = document.querySelector('.w-40.sm\\:w-48');
+    // Check for full width classes on the container (updated for flowing grid design)
+    const container = document.querySelector('.w-full');
     expect(container).toBeInTheDocument();
   });
 });

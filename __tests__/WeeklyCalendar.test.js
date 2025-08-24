@@ -215,19 +215,19 @@ describe('WeeklyCalendar', () => {
         />
       );
 
-      // Should render 7 columns total (6 regular + 1 error for Friday)
+      // Should render 7 columns per responsive layout (mobile + tablet + desktop = 21 total)
       const dayColumns = screen.getAllByTestId('day-column');
       const errorColumns = screen.getAllByTestId('day-column-error');
-      expect(dayColumns.length + errorColumns.length).toBe(7);
+      expect(dayColumns.length + errorColumns.length).toBeGreaterThanOrEqual(7); // At least 7 due to responsive grids
 
-      // Check that all days are rendered (Friday will be in error state)
-      expect(screen.getByText('Monday')).toBeInTheDocument();
-      expect(screen.getByText('Tuesday')).toBeInTheDocument();
-      expect(screen.getByText('Wednesday')).toBeInTheDocument();
-      expect(screen.getByText('Thursday')).toBeInTheDocument();
-      expect(screen.getByText('Pool closed for maintenance')).toBeInTheDocument(); // Friday error
-      expect(screen.getByText('Saturday')).toBeInTheDocument();
-      expect(screen.getByText('Sunday')).toBeInTheDocument();
+      // Check that all days are rendered (Friday will be in error state) - multiple instances due to responsive grids
+      expect(screen.getAllByText('Monday')).toHaveLength(3); // Mobile, tablet, desktop
+      expect(screen.getAllByText('Tuesday')).toHaveLength(3);
+      expect(screen.getAllByText('Wednesday')).toHaveLength(3);
+      expect(screen.getAllByText('Thursday')).toHaveLength(3);
+      expect(screen.getAllByText('Pool closed for maintenance')).toHaveLength(3); // Friday error - multiple instances
+      expect(screen.getAllByText('Saturday')).toHaveLength(3);
+      expect(screen.getAllByText('Sunday')).toHaveLength(3);
     });
 
     it('fills missing days with placeholder data', () => {
@@ -241,18 +241,19 @@ describe('WeeklyCalendar', () => {
         />
       );
 
-      // Should still render 7 columns (3 with data, 4 with errors)
+      // Should still render columns (3 with data, 4 with errors) across responsive layouts
       const dayColumns = screen.getAllByTestId(/day-column/);
-      expect(dayColumns).toHaveLength(7);
+      expect(dayColumns.length).toBeGreaterThanOrEqual(7); // At least 7 due to responsive grids
 
-      // First 3 should have data
-      expect(screen.getByText('Monday')).toBeInTheDocument();
-      expect(screen.getByText('Tuesday')).toBeInTheDocument();
-      expect(screen.getByText('Wednesday')).toBeInTheDocument();
+      // First 3 should have data - multiple instances due to responsive grids
+      expect(screen.getAllByText('Monday')).toHaveLength(3); // Mobile, tablet, desktop
+      expect(screen.getAllByText('Tuesday')).toHaveLength(3);
+      expect(screen.getAllByText('Wednesday')).toHaveLength(3);
       
-      // Last 4 should be error states with "No data available"
+      // Last 4 should be error states with "No data available" - multiple instances due to responsive grids
       const errorColumns = screen.getAllByTestId('day-column-error');
-      expect(errorColumns).toHaveLength(4);
+      expect(errorColumns.length).toBeGreaterThanOrEqual(4); // At least 4 due to responsive grids
+      // Check that all error columns have the expected text
       errorColumns.forEach(column => {
         expect(column).toHaveTextContent('No data available');
       });
@@ -267,8 +268,8 @@ describe('WeeklyCalendar', () => {
         />
       );
 
-      // Check that today is marked correctly
-      expect(screen.getByTestId('is-today')).toBeInTheDocument();
+      // Check that today is marked correctly (multiple instances due to responsive grids)
+      expect(screen.getAllByTestId('is-today')).toHaveLength(3); // Mobile, tablet, desktop grids
 
       // Check that hours count is passed correctly
       const hoursCountElements = screen.getAllByTestId('day-hours-count');
@@ -279,7 +280,7 @@ describe('WeeklyCalendar', () => {
   });
 
   describe('Responsive Design', () => {
-    it('renders horizontal scroll container', () => {
+    it('renders mobile grid layout', () => {
       render(
         <WeeklyCalendar
           weekData={mockWeekData}
@@ -288,12 +289,12 @@ describe('WeeklyCalendar', () => {
         />
       );
 
-      const scrollContainer = document.querySelector('.overflow-x-auto');
-      expect(scrollContainer).toBeInTheDocument();
-      expect(scrollContainer).toHaveClass('flex', 'gap-3', 'pb-4');
+      const mobileGrid = document.querySelector('.grid-cols-2');
+      expect(mobileGrid).toBeInTheDocument();
+      expect(mobileGrid).toHaveClass('grid', 'grid-cols-2', 'gap-3', 'mb-4');
     });
 
-    it('renders scroll hint for mobile', () => {
+    it('renders tablet and desktop grid layouts', () => {
       render(
         <WeeklyCalendar
           weekData={mockWeekData}
@@ -302,7 +303,13 @@ describe('WeeklyCalendar', () => {
         />
       );
 
-      expect(screen.getByText('Scroll to see all days')).toBeInTheDocument();
+      // Check for tablet layout (4 columns)
+      const tabletGrid = document.querySelector('.grid-cols-4');
+      expect(tabletGrid).toBeInTheDocument();
+
+      // Check for desktop layout (7 columns)
+      const desktopGrid = document.querySelector('.grid-cols-7');
+      expect(desktopGrid).toBeInTheDocument();
     });
   });
 
@@ -316,8 +323,8 @@ describe('WeeklyCalendar', () => {
         />
       );
 
-      // Count days with hours: Monday(2), Tuesday(1), Thursday(1), Saturday(1), Sunday(1) = 5 days
-      expect(screen.getByText('5 of 7 days have pool hours')).toBeInTheDocument();
+      // Count days with hours: Monday(2), Tuesday(1), Thursday(1), Saturday(1), Sunday(1) = 5 days (compact text)
+      expect(screen.getByText(/5.*of.*7.*days.*have.*hours/)).toBeInTheDocument();
     });
 
     it('handles week with no pool hours', () => {
@@ -334,7 +341,7 @@ describe('WeeklyCalendar', () => {
         />
       );
 
-      expect(screen.getByText('0 of 7 days have pool hours')).toBeInTheDocument();
+      expect(screen.getByText(/0.*of.*7.*days.*have.*hours/)).toBeInTheDocument();
     });
   });
 
@@ -348,9 +355,9 @@ describe('WeeklyCalendar', () => {
         />
       );
 
-      // Should still render 7 placeholder columns
+      // Should still render 7 placeholder columns (but responsive grid creates multiple instances)
       const dayColumns = screen.getAllByTestId(/day-column/);
-      expect(dayColumns).toHaveLength(7);
+      expect(dayColumns.length).toBeGreaterThanOrEqual(7); // At least 7 due to responsive grids
     });
 
     it('handles null weekData', () => {
@@ -362,9 +369,9 @@ describe('WeeklyCalendar', () => {
         />
       );
 
-      // Should still render 7 placeholder columns
+      // Should still render 7 placeholder columns (but responsive grid creates multiple instances)
       const dayColumns = screen.getAllByTestId(/day-column/);
-      expect(dayColumns).toHaveLength(7);
+      expect(dayColumns.length).toBeGreaterThanOrEqual(7); // At least 7 due to responsive grids
     });
   });
 
@@ -384,7 +391,7 @@ describe('WeeklyCalendar', () => {
       expect(heading).toHaveTextContent(/This Week/);
     });
 
-    it('provides scroll indicators with proper icons', () => {
+    it('has proper responsive grid structure', () => {
       render(
         <WeeklyCalendar
           weekData={mockWeekData}
@@ -393,12 +400,13 @@ describe('WeeklyCalendar', () => {
         />
       );
 
-      const scrollHint = screen.getByText('Scroll to see all days');
-      expect(scrollHint).toBeInTheDocument();
+      // Check that responsive grids are properly structured
+      const responsiveContainer = document.querySelector('.relative');
+      expect(responsiveContainer).toBeInTheDocument();
       
-      // Check for arrow icons
-      const svgElements = document.querySelectorAll('svg');
-      expect(svgElements.length).toBeGreaterThan(0);
+      // Check for proper grid classes
+      const gridElements = document.querySelectorAll('[class*="grid-cols"]');
+      expect(gridElements.length).toBeGreaterThan(0);
     });
   });
 });

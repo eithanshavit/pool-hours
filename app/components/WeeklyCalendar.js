@@ -54,12 +54,12 @@ export default function WeeklyCalendar({
     return (
       <div className="w-full">
         {/* Week header skeleton */}
-        <div className="mb-6">
-          <div className="h-8 bg-gray-200 rounded animate-pulse w-48 mx-auto"></div>
+        <div className="mb-2">
+          <div className="h-6 bg-gray-200 rounded animate-pulse w-32 mx-auto"></div>
         </div>
         
         {/* Day columns skeleton */}
-        <div className="flex gap-3 overflow-x-auto pb-4 px-4 sm:px-0">
+        <div className="flex gap-2 overflow-x-auto pb-2 px-2">
           {[1, 2, 3, 4, 5, 6, 7].map((i) => (
             <DayColumn 
               key={i}
@@ -79,17 +79,17 @@ export default function WeeklyCalendar({
     return (
       <div className="w-full">
         {/* Week header */}
-        <div className="text-center mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
+        <div className="text-center mb-2">
+          <h2 className="text-base font-bold text-gray-900 mb-1">
             {formatWeekHeader()}
           </h2>
         </div>
         
         {/* Error message */}
-        <div className="text-center py-12">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
-            <div className="text-red-600 font-medium mb-2">Unable to Load Week</div>
-            <div className="text-red-500 text-sm">{error}</div>
+        <div className="text-center py-4">
+          <div className="bg-red-50 border border-red-200 rounded p-3 max-w-sm mx-auto">
+            <div className="text-red-600 font-medium mb-1 text-sm">Unable to Load Week</div>
+            <div className="text-red-500 text-xs">{error}</div>
           </div>
         </div>
       </div>
@@ -118,61 +118,92 @@ export default function WeeklyCalendar({
 
   return (
     <div className="w-full">
-      {/* Week Header */}
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-2">
+      {/* Mobile-Optimized Week Header */}
+      <div className="text-center mb-4 px-3">
+        <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-2 responsive-transition">
           {formatWeekHeader()}
         </h2>
         {weekOffset === 0 && (
-          <div className="text-sm text-blue-600 font-medium">
+          <div className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full inline-block">
             Current Week
           </div>
         )}
         {weekOffset === 1 && (
-          <div className="text-sm text-gray-600 font-medium">
+          <div className="text-xs text-gray-600 font-medium bg-gray-100 px-2 py-1 rounded-full inline-block">
             Upcoming Week
           </div>
         )}
       </div>
 
-      {/* 7-Day Grid Layout */}
+      {/* Compact 7-Day Grid Layout */}
       <div className="relative">
-        {/* Mobile: Horizontal scrolling container */}
-        <div className="flex gap-3 overflow-x-auto pb-4 px-4 sm:px-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-          {fullWeekData.map((dayData, index) => (
-            <DayColumn
-              key={dayData.date || index}
-              dayData={dayData}
-              currentTime={currentTime}
-              isCurrentWeek={isCurrentWeek}
-              loading={false}
-              error={dayData.error}
-            />
-          ))}
-        </div>
-        
-        {/* Scroll hint for mobile */}
-        <div className="sm:hidden text-center mt-2">
-          <div className="text-xs text-gray-400 flex items-center justify-center gap-1">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
-            </svg>
-            Scroll to see all days
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
+        {/* Responsive grid container */}
+        <div className="px-3">
+          {/* Mobile: Flowing grid layout */}
+          <div className="sm:hidden">
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {fullWeekData.map((dayData, index) => (
+                <DayColumn
+                  key={dayData.date || index}
+                  dayData={dayData}
+                  currentTime={currentTime}
+                  isCurrentWeek={isCurrentWeek}
+                  loading={false}
+                  error={dayData.error}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Tablet and Desktop: Grid layout */}
+          <div className="hidden sm:block">
+            {/* Tablet: 2x4 grid (2 rows, 4 columns) with Sunday separate */}
+            <div className="sm:block lg:hidden">
+              <div className="grid grid-cols-4 gap-3 mb-3">
+                {fullWeekData.slice(0, 4).map((dayData, index) => (
+                  <DayColumn
+                    key={dayData.date || index}
+                    dayData={dayData}
+                    currentTime={currentTime}
+                    isCurrentWeek={isCurrentWeek}
+                    loading={false}
+                    error={dayData.error}
+                  />
+                ))}
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {fullWeekData.slice(4).map((dayData, index) => (
+                  <DayColumn
+                    key={dayData.date || (index + 4)}
+                    dayData={dayData}
+                    currentTime={currentTime}
+                    isCurrentWeek={isCurrentWeek}
+                    loading={false}
+                    error={dayData.error}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Large Desktop: Single row */}
+            <div className="hidden lg:block">
+              <div className="grid grid-cols-7 gap-4">
+                {fullWeekData.map((dayData, index) => (
+                  <DayColumn
+                    key={dayData.date || index}
+                    dayData={dayData}
+                    currentTime={currentTime}
+                    isCurrentWeek={isCurrentWeek}
+                    loading={false}
+                    error={dayData.error}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Week Summary (optional) */}
-      {weekData && weekData.length > 0 && (
-        <div className="mt-6 text-center">
-          <div className="text-xs text-gray-500">
-            {weekData.filter(day => day.hours && day.hours.length > 0).length} of 7 days have pool hours
-          </div>
-        </div>
-      )}
     </div>
   );
 }

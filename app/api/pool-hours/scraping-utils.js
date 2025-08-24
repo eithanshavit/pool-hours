@@ -35,27 +35,41 @@ export async function scrapePoolHours(clientDate) {
       targetDayName = targetDate.format('dddd');
     }
     
-    console.log('// DEBUG PRINT - scrapePoolHours - clientDate:', clientDate);
-    console.log('// DEBUG PRINT - scrapePoolHours - targetDate:', targetDate.format('YYYY-MM-DD'));
-    console.log('// DEBUG PRINT - scrapePoolHours - targetDayName:', targetDayName);
+
     
-    // Parse lap swim hours
-    const lapSwimHours = parseLapSwimHours($);
-    
-    // Parse rec swim hours
-    const recSwimHours = parseRecSwimHours($);
+    // Parse all pool hours (both lap and recreational)
+    const allPoolHours = parseAllPoolHours($);
     
     // Get the target day's hours
-    const targetLapSwim = lapSwimHours[targetDayName] || [];
-    const targetRecSwim = recSwimHours[targetDayName] || [];
+    const targetDayHours = allPoolHours[targetDayName] || [];
     
-    // Convert to machine-readable timestamps with type information
-    const lapSwimTimestamps = convertToTimestamps(targetLapSwim, 'lap', targetDate);
-    const recSwimTimestamps = convertToTimestamps(targetRecSwim, 'rec', targetDate);
-    const timestampedHours = [...lapSwimTimestamps, ...recSwimTimestamps].sort((a, b) => {
-      // Sort by start time
-      return new Date(a.start) - new Date(b.start);
+    // Convert to machine-readable timestamps (type is already determined during parsing)
+    const timestampedHours = [];
+    targetDayHours.forEach(session => {
+      const timeRange = parseTimeRange(session.time);
+      if (timeRange) {
+        const { startTime, endTime } = timeRange;
+        
+        // Create full datetime objects for the target date in PST, then convert to GMT
+        const startDateTimePST = moment.tz(targetDate.format('YYYY-MM-DD') + ' ' + startTime, 'YYYY-MM-DD HH:mm', 'America/Los_Angeles');
+        const endDateTimePST = moment.tz(targetDate.format('YYYY-MM-DD') + ' ' + endTime, 'YYYY-MM-DD HH:mm', 'America/Los_Angeles');
+        
+        // Convert to GMT
+        const startDateTimeGMT = startDateTimePST.utc();
+        const endDateTimeGMT = endDateTimePST.utc();
+        
+        timestampedHours.push({
+          start: startDateTimeGMT.toISOString(),
+          end: endDateTimeGMT.toISOString(),
+          timezone: 'GMT',
+          original: session.time,
+          type: session.type
+        });
+      }
     });
+    
+    // Sort by start time
+    timestampedHours.sort((a, b) => new Date(a.start) - new Date(b.start));
     
     return {
       hours: timestampedHours,
@@ -102,53 +116,7 @@ export async function scrapePoolHours(clientDate) {
   }
 }
 
-/**
- * Converts human-readable time strings to machine-readable timestamps in GMT
- * @param {Array} timeStrings - Array of time strings like "7:30am - 11:00am"
- * @param {string} type - Type of swim (e.g., 'lap', 'rec')
- * @param {moment} targetDate - Target date in PST timezone
- * @returns {Array} Array of objects with start and end timestamps in GMT
- */
-function convertToTimestamps(timeStrings, type, targetDate) {
-  // Use the target date in PST for parsing the website times, then convert to GMT
-  const targetDatePST = targetDate.clone().startOf('day');
-  const timestamps = [];
-  
-  console.log('// DEBUG PRINT - convertToTimestamps - targetDatePST:', targetDatePST.format('YYYY-MM-DD'));
-  console.log('// DEBUG PRINT - convertToTimestamps - timeStrings:', timeStrings);
-  console.log('// DEBUG PRINT - convertToTimestamps - type:', type);
-  
-  timeStrings.forEach(timeString => {
-    const timeRange = parseTimeRange(timeString);
-    if (timeRange) {
-      const { startTime, endTime } = timeRange;
-      
-      console.log('// DEBUG PRINT - convertToTimestamps - parsed timeRange:', timeRange);
-      
-      // Create full datetime objects for the target date in PST, then convert to GMT
-      const startDateTimePST = moment.tz(targetDatePST.format('YYYY-MM-DD') + ' ' + startTime, 'YYYY-MM-DD HH:mm', 'America/Los_Angeles');
-      const endDateTimePST = moment.tz(targetDatePST.format('YYYY-MM-DD') + ' ' + endTime, 'YYYY-MM-DD HH:mm', 'America/Los_Angeles');
-      
-      // Convert to GMT
-      const startDateTimeGMT = startDateTimePST.utc();
-      const endDateTimeGMT = endDateTimePST.utc();
-      
-      console.log('// DEBUG PRINT - convertToTimestamps - startDateTimeGMT:', startDateTimeGMT.format('YYYY-MM-DD HH:mm:ss'));
-      console.log('// DEBUG PRINT - convertToTimestamps - endDateTimeGMT:', endDateTimeGMT.format('YYYY-MM-DD HH:mm:ss'));
-      
-      timestamps.push({
-        start: startDateTimeGMT.toISOString(),
-        end: endDateTimeGMT.toISOString(),
-        timezone: 'GMT',
-        original: timeString,
-        type: type // Add type information
-      });
-    }
-  });
-  
-  console.log('// DEBUG PRINT - convertToTimestamps - final timestamps:', JSON.stringify(timestamps, null, 2));
-  return timestamps;
-}
+
 
 /**
  * Parses a time range string (e.g., "7:30am - 11:00am") in PST timezone
@@ -166,262 +134,174 @@ function parseTimeRange(timeRange) {
 }
 
 /**
- * Parses lap swim hours from the webpage with flexible detection
+ * Parses all pool hours (both lap and recreational) from the webpage
  * @param {Object} $ - Cheerio object
- * @returns {Object} Object with days as keys and time ranges as values
+ * @returns {Object} Object with days as keys and arrays of {time, type} objects as values
  */
-function parseLapSwimHours($) {
-  const lapSwimHours = {};
+function parseAllPoolHours($) {
+  const allHours = {};
   
-  // Multiple strategies to find lap swim hours
-  const strategies = [
-    // Strategy 1: Look for exact heading match
-    () => {
-      const section = $('h3:contains("Lap Swim Hours")').nextUntil('h3');
-      return section.find('table').first();
-    },
-    // Strategy 2: Look for partial heading match
-    () => {
-      const section = $('h3').filter((i, el) => {
-        return $(el).text().toLowerCase().includes('lap') && 
-               $(el).text().toLowerCase().includes('swim');
-      }).nextUntil('h3');
-      return section.find('table').first();
-    },
-    // Strategy 3: Look for any table with "lap" in nearby text
-    () => {
-      return $('table').filter((i, table) => {
-        const tableText = $(table).text().toLowerCase();
-        const prevText = $(table).prevAll().text().toLowerCase();
-        const nextText = $(table).nextAll().text().toLowerCase();
-        return (tableText + prevText + nextText).includes('lap');
-      }).first();
-    },
-    // Strategy 4: Look for tables with time patterns and day names
-    () => {
-      return $('table').filter((i, table) => {
-        const rows = $(table).find('tr');
-        let hasTimePattern = false;
-        let hasDayNames = false;
-        
-        rows.each((j, row) => {
-          const cells = $(row).find('td, th');
-          cells.each((k, cell) => {
-            const text = $(cell).text().trim();
-            // Check for time patterns (e.g., "7:30am - 11:00am")
-            if (/\d{1,2}:\d{2}(?:am|pm)\s*-\s*\d{1,2}:\d{2}(?:am|pm)/i.test(text)) {
-              hasTimePattern = true;
-            }
-            // Check for day names
-            if (/^(mon|tue|wed|thu|fri|sat|sun)/i.test(text)) {
-              hasDayNames = true;
-            }
-          });
-        });
-        
-        return hasTimePattern && hasDayNames;
-      }).first();
+  // First, find all section headers and their positions in the document
+  const sectionHeaders = [];
+  $('*').each((i, element) => {
+    const text = $(element).text().toLowerCase().trim();
+    if (text.includes('lap swim hours')) {
+      sectionHeaders.push({ type: 'lap', element: $(element), position: i });
+    } else if (text.includes('rec swim hours')) {
+      sectionHeaders.push({ type: 'rec', element: $(element), position: i });
     }
-  ];
-
-  let table = null;
-  for (const strategy of strategies) {
-    table = strategy();
-    if (table.length > 0) {
-      break;
+  });
+  
+  // Look for all tables that contain pool hours
+  $('table').each((tableIndex, table) => {
+    const $table = $(table);
+    const tableText = $table.text().toLowerCase();
+    const prevText = $table.prevAll().text().toLowerCase();
+    const nextText = $table.nextAll().text().toLowerCase();
+    const combinedText = tableText + prevText + nextText;
+    
+    // Check if this table contains pool hours (has time patterns and day names)
+    const hasTimePattern = /\d{1,2}:\d{2}(?:am|pm)\s*-\s*\d{1,2}:\d{2}(?:am|pm)/i.test(combinedText);
+    const hasDayNames = /(mon|tue|wed|thu|fri|sat|sun|monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i.test(combinedText);
+    
+    if (!hasTimePattern || !hasDayNames) {
+      return; // Skip this table
     }
-  }
-
-  if (table.length === 0) {
-    console.warn('Could not find lap swim hours table');
-    return lapSwimHours;
-  }
-
-  // Parse the table with flexible column detection
-  table.find('tr').each((index, row) => {
-    const cells = $(row).find('td, th');
     
-    // Skip header rows and empty rows
-    if (cells.length < 2) return;
+    // Determine the session type for this entire table based on section headers
+    let tableSessionType = 'rec'; // Default to recreational
     
-    // Try to identify which columns contain days and times
-    let dayColumn = -1;
-    let timeColumns = [];
-    
-    cells.each((cellIndex, cell) => {
-      const text = $(cell).text().trim().toLowerCase();
-      
-      // Check if this looks like a day column
-      if (/^(mon|tue|wed|thu|fri|sat|sun|monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i.test(text)) {
-        dayColumn = cellIndex;
-      }
-      
-      // Check if this looks like a time column (can be multiple)
-      if (/\d{1,2}:\d{2}(?:am|pm)/i.test(text)) {
-        timeColumns.push(cellIndex);
+    // Find the table's position in the document
+    let tablePosition = -1;
+    $('*').each((i, element) => {
+      if (element === table) {
+        tablePosition = i;
+        return false; // Break
       }
     });
     
-    // If we found day column and at least one time column, extract the data
-    if (dayColumn >= 0 && timeColumns.length > 0) {
-      const day = $(cells[dayColumn]).text().trim();
+    // Find the most recent section header before this table
+    let mostRecentHeader = null;
+    for (const header of sectionHeaders) {
+      if (header.position < tablePosition) {
+        if (!mostRecentHeader || header.position > mostRecentHeader.position) {
+          mostRecentHeader = header;
+        }
+      }
+    }
+    
+    if (mostRecentHeader) {
+      tableSessionType = mostRecentHeader.type;
+    }
+    
+    // Fallback: check the entire document text before this table
+    if (!mostRecentHeader) {
+      const documentText = $('body').text().toLowerCase();
+      const tableHtml = $table.prop('outerHTML');
+      const tableIndex = documentText.indexOf($table.text().toLowerCase().substring(0, 50));
       
-      if (day) {
-        // Handle multiple days in one row (e.g., "Mon-Fri" or "Mon/Wed/Fri")
-        if (day.includes('-')) {
-          const [startDay, endDay] = day.split('-').map(d => d.trim());
-          const dayRange = getDayRange(startDay, endDay);
-          dayRange.forEach(dayName => {
-            lapSwimHours[dayName] = lapSwimHours[dayName] || [];
-            
-            // Extract all time spans for this day
-            timeColumns.forEach(timeColumnIndex => {
-              const time = $(cells[timeColumnIndex]).text().trim();
-              if (time && /\d{1,2}:\d{2}(?:am|pm)/i.test(time)) {
-                lapSwimHours[dayName].push(time);
+      if (tableIndex > 0) {
+        const textBeforeTable = documentText.substring(0, tableIndex);
+        const lastLapIndex = textBeforeTable.lastIndexOf('lap swim hours');
+        const lastRecIndex = textBeforeTable.lastIndexOf('rec swim hours');
+        
+        if (lastLapIndex > lastRecIndex) {
+          tableSessionType = 'lap';
+        } else if (lastRecIndex > lastLapIndex) {
+          tableSessionType = 'rec';
+        }
+      }
+    }
+    
+    // Parse each row in the table
+    $table.find('tr').each((rowIndex, row) => {
+      const cells = $(row).find('td, th');
+      
+      if (cells.length < 2) return; // Skip rows with insufficient columns
+      
+      // Try to identify which columns contain days and times
+      let dayColumn = -1;
+      let timeColumns = [];
+      
+      cells.each((cellIndex, cell) => {
+        const text = $(cell).text().trim().toLowerCase();
+        
+        // Check if this looks like a day column
+        if (/^(mon|tue|wed|thu|fri|sat|sun|monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i.test(text)) {
+          dayColumn = cellIndex;
+        }
+        
+        // Check if this looks like a time column (can be multiple)
+        if (/\d{1,2}:\d{2}(?:am|pm)/i.test(text)) {
+          timeColumns.push(cellIndex);
+        }
+      });
+      
+      // If we found day column and at least one time column, extract the data
+      if (dayColumn >= 0 && timeColumns.length > 0) {
+        const dayText = $(cells[dayColumn]).text().trim();
+        
+        if (dayText) {
+          // Handle multiple days in one row (e.g., "Mon-Fri")
+          let dayNames = [];
+          if (dayText.includes('-')) {
+            const [startDay, endDay] = dayText.split('-').map(d => d.trim());
+            dayNames = getDayRange(startDay, endDay);
+          } else {
+            const days = dayText.split(/[\/\-]/).map(d => d.trim());
+            dayNames = days.map(dayName => normalizeDayName(dayName)).filter(Boolean);
+          }
+          
+          // Extract all time spans for these days
+          timeColumns.forEach(timeColumnIndex => {
+            const timeText = $(cells[timeColumnIndex]).text().trim();
+            if (timeText && /\d{1,2}:\d{2}(?:am|pm)/i.test(timeText)) {
+              
+              // Use the table-level session type determined above
+              let sessionType = tableSessionType;
+              
+              // Only override if there are specific indicators in the cell text itself
+              const cellText = $(cells[timeColumnIndex]).text().toLowerCase();
+              const rowText = $(row).text().toLowerCase();
+              
+              // Override to lap if cell specifically mentions lap swimming
+              if (cellText.includes('lap swim') || rowText.includes('lap swim')) {
+                sessionType = 'lap';
               }
-            });
-          });
-        } else {
-          const days = day.split(/[\/\-]/).map(d => d.trim());
-          days.forEach(dayName => {
-            if (dayName) {
-              const fullDayName = normalizeDayName(dayName);
-              if (fullDayName) {
-                lapSwimHours[fullDayName] = lapSwimHours[fullDayName] || [];
-                
-                // Extract all time spans for this day
-                timeColumns.forEach(timeColumnIndex => {
-                  const time = $(cells[timeColumnIndex]).text().trim();
-                  if (time && /\d{1,2}:\d{2}(?:am|pm)/i.test(time)) {
-                    lapSwimHours[fullDayName].push(time);
-                  }
+              
+              // Override to rec if cell specifically mentions recreational swimming
+              if (cellText.includes('rec swim') || 
+                  cellText.includes('recreational swim') ||
+                  cellText.includes('open swim') ||
+                  cellText.includes('family swim') ||
+                  rowText.includes('rec swim') ||
+                  rowText.includes('recreational swim') ||
+                  rowText.includes('open swim') ||
+                  rowText.includes('family swim')) {
+                sessionType = 'rec';
+              }
+              
+              // Add to all matching days
+              dayNames.forEach(dayName => {
+                if (!allHours[dayName]) {
+                  allHours[dayName] = [];
+                }
+                allHours[dayName].push({
+                  time: timeText,
+                  type: sessionType
                 });
-              }
+              });
             }
           });
         }
       }
-    }
-  });
-  
-  return lapSwimHours;
-}
-
-/**
- * Parses rec swim hours from the webpage with flexible detection
- * @param {Object} $ - Cheerio object
- * @returns {Object} Object with days as keys and time ranges as values
- */
-function parseRecSwimHours($) {
-  const recSwimHours = {};
-  
-  // Multiple strategies to find rec swim hours
-  const strategies = [
-    // Strategy 1: Look for exact heading match
-    () => {
-      const section = $('h3:contains("Rec Swim Hours")').nextUntil('h3');
-      return section.find('table').first();
-    },
-    // Strategy 2: Look for partial heading match
-    () => {
-      const section = $('h3').filter((i, el) => {
-        const text = $(el).text().toLowerCase();
-        return (text.includes('rec') || text.includes('recreational')) && 
-               text.includes('swim');
-      }).nextUntil('h3');
-      return section.find('table').first();
-    },
-    // Strategy 3: Look for any table with "rec" or "recreational" in nearby text
-    () => {
-      return $('table').filter((i, table) => {
-        const tableText = $(table).text().toLowerCase();
-        const prevText = $(table).prevAll().text().toLowerCase();
-        const nextText = $(table).nextAll().text().toLowerCase();
-        return (tableText + prevText + nextText).includes('rec') ||
-               (tableText + prevText + nextText).includes('recreational');
-      }).first();
-    }
-  ];
-
-  let table = null;
-  for (const strategy of strategies) {
-    table = strategy();
-    if (table.length > 0) {
-      break;
-    }
-  }
-
-  if (table.length === 0) {
-    console.warn('Could not find rec swim hours table');
-    return recSwimHours;
-  }
-
-  // Parse the table with flexible column detection (same logic as lap swim)
-  table.find('tr').each((index, row) => {
-    const cells = $(row).find('td, th');
-    
-    if (cells.length < 2) return;
-    
-    let dayColumn = -1;
-    let timeColumns = [];
-    
-    cells.each((cellIndex, cell) => {
-      const text = $(cell).text().trim().toLowerCase();
-      
-      if (/^(mon|tue|wed|thu|fri|sat|sun|monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i.test(text)) {
-        dayColumn = cellIndex;
-      }
-      
-      if (/\d{1,2}:\d{2}(?:am|pm)/i.test(text)) {
-        timeColumns.push(cellIndex);
-      }
     });
-    
-    if (dayColumn >= 0 && timeColumns.length > 0) {
-      const day = $(cells[dayColumn]).text().trim();
-      
-      if (day) {
-        // Handle multiple days in one row (e.g., "Mon-Fri")
-        if (day.includes('-')) {
-          const [startDay, endDay] = day.split('-').map(d => d.trim());
-          const dayRange = getDayRange(startDay, endDay);
-          dayRange.forEach(dayName => {
-            recSwimHours[dayName] = recSwimHours[dayName] || [];
-            
-            // Extract all time spans for this day
-            timeColumns.forEach(timeColumnIndex => {
-              const time = $(cells[timeColumnIndex]).text().trim();
-              if (time && /\d{1,2}:\d{2}(?:am|pm)/i.test(time)) {
-                recSwimHours[dayName].push(time);
-              }
-            });
-          });
-        } else {
-          const days = day.split(/[\/\-]/).map(d => d.trim());
-          days.forEach(dayName => {
-            if (dayName) {
-              const fullDayName = normalizeDayName(dayName);
-              if (fullDayName) {
-                recSwimHours[fullDayName] = recSwimHours[fullDayName] || [];
-                
-                // Extract all time spans for this day
-                timeColumns.forEach(timeColumnIndex => {
-                  const time = $(cells[timeColumnIndex]).text().trim();
-                  if (time && /\d{1,2}:\d{2}(?:am|pm)/i.test(time)) {
-                    recSwimHours[fullDayName].push(time);
-                  }
-                });
-              }
-            }
-          });
-        }
-      }
-    }
   });
   
-  return recSwimHours;
+  return allHours;
 }
+
+
 
 /**
  * Normalizes day names to full day names

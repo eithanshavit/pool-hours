@@ -117,7 +117,7 @@ export default function DailyView({ currentTime }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 pb-4">
         <div className="w-[300px] h-[300px] bg-white rounded-3xl shadow-lg flex items-center justify-center p-6">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500 mx-auto mb-4"></div>
@@ -142,7 +142,7 @@ export default function DailyView({ currentTime }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 pb-4">
       <div className={`w-[300px] h-[300px] ${getBackgroundColor(isOpenNow)} rounded-3xl shadow-lg transition-colors duration-500 p-2 overflow-y-auto`}>
         <div className={getTextColor(isOpenNow)}>
           <div className="text-center mb-4">

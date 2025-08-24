@@ -122,7 +122,7 @@ describe('TodayHighlight Component', () => {
       />
     );
 
-    // Check that all pool sessions are displayed (using getAllByText for multiple instances)
+    // Check that all pool sessions are displayed (using full labels)
     expect(screen.getAllByText('LAP SWIM')).toHaveLength(2);
     expect(screen.getByText('RECREATIONAL')).toBeInTheDocument();
     
@@ -178,7 +178,7 @@ describe('TodayHighlight Component', () => {
       />
     );
 
-    expect(screen.getByText('Current Time')).toBeInTheDocument();
+    expect(screen.getByText(/Current:/)).toBeInTheDocument(); // Changed to compact form
     expect(screen.getByText(/PST$/)).toBeInTheDocument();
   });
 
@@ -247,8 +247,8 @@ describe('TodayHighlight Component', () => {
       />
     );
 
-    // Check for responsive classes on the main container
-    const container = document.querySelector('.max-w-4xl.mx-auto');
+    // Check for responsive classes on the main container (updated for compact design)
+    const container = document.querySelector('.max-w-3xl');
     expect(container).toBeInTheDocument();
 
     // Check for proper heading structure
