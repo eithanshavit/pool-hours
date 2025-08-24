@@ -1,0 +1,238 @@
+import { render, screen } from '@testing-library/react';
+import DayColumn from '../app/components/DayColumn';
+
+// Mock data for testing
+const mockDayData = {
+  date: '2024-01-15',
+  dayName: 'Monday',
+  hours: [
+    {
+      start: '2024-01-15T06:00:00.000Z',
+      end: '2024-01-15T08:00:00.000Z',
+      type: 'lap'
+    },
+    {
+      start: '2024-01-15T10:00:00.000Z',
+      end: '2024-01-15T12:00:00.000Z',
+      type: 'rec'
+    },
+    {
+      start: '2024-01-15T14:00:00.000Z',
+      end: '2024-01-15T16:00:00.000Z',
+      type: 'lap'
+    }
+  ],
+  isToday: false
+};
+
+const mockTodayData = {
+  ...mockDayData,
+  isToday: true
+};
+
+const mockCurrentTime = new Date('2024-01-15T11:00:00.000Z');
+
+describe('DayColumn Component', () => {
+  test('renders day header correctly', () => {
+    render(
+      <DayColumn 
+        dayData={mockDayData} 
+        currentTime={mockCurrentTime} 
+        isCurrentWeek={false}
+      />
+    );
+    
+    expect(screen.getByText('Monday')).toBeInTheDocument();
+    expect(screen.getByText('Jan 15')).toBeInTheDocument();
+  });
+
+  test('renders time slots correctly', () => {
+    render(
+      <DayColumn 
+        dayData={mockDayData} 
+        currentTime={mockCurrentTime} 
+        isCurrentWeek={false}
+      />
+    );
+    
+    // Check for LAP and REC labels
+    expect(screen.getAllByText('LAP')).toHaveLength(2);
+    expect(screen.getAllByText('REC')).toHaveLength(1);
+  });
+
+  test('highlights current day correctly', () => {
+    render(
+      <DayColumn 
+        dayData={mockTodayData} 
+        currentTime={mockCurrentTime} 
+        isCurrentWeek={true}
+      />
+    );
+    
+    expect(screen.getByText('Today')).toBeInTheDocument();
+    
+    // Check for today styling (blue border) - find the outermost container
+    const container = document.querySelector('.border-blue-400');
+    expect(container).toBeInTheDocument();
+  });
+
+  test('shows current/next indicators for today only', () => {
+    // Mock current time to be during the second slot (10:00-12:00)
+    const currentTimeInSlot = new Date('2024-01-15T11:00:00.000Z');
+    
+    render(
+      <DayColumn 
+        dayData={mockTodayData} 
+        currentTime={currentTimeInSlot} 
+        isCurrentWeek={true}
+      />
+    );
+    
+    // Should show NOW indicator for current slot
+    expect(screen.getByText('NOW')).toBeInTheDocument();
+  });
+
+  test('does not show current/next indicators for non-today days', () => {
+    render(
+      <DayColumn 
+        dayData={mockDayData} 
+        currentTime={mockCurrentTime} 
+        isCurrentWeek={true}
+      />
+    );
+    
+    // Should not show NOW or NEXT indicators
+    expect(screen.queryByText('NOW')).not.toBeInTheDocument();
+    expect(screen.queryByText('NEXT')).not.toBeInTheDocument();
+  });
+
+  test('renders loading state correctly', () => {
+    render(
+      <DayColumn 
+        loading={true}
+        currentTime={mockCurrentTime} 
+        isCurrentWeek={false}
+      />
+    );
+    
+    // Should show skeleton loading elements
+    const skeletonElements = document.querySelectorAll('.animate-pulse');
+    expect(skeletonElements.length).toBeGreaterThan(0);
+  });
+
+  test('renders error state correctly', () => {
+    const errorMessage = 'Failed to load pool hours';
+    
+    render(
+      <DayColumn 
+        dayData={mockDayData}
+        error={errorMessage}
+        currentTime={mockCurrentTime} 
+        isCurrentWeek={false}
+      />
+    );
+    
+    expect(screen.getByText('Error')).toBeInTheDocument();
+    expect(screen.getByText(errorMessage)).toBeInTheDocument();
+  });
+
+  test('renders no hours state correctly', () => {
+    const noHoursData = {
+      ...mockDayData,
+      hours: []
+    };
+    
+    render(
+      <DayColumn 
+        dayData={noHoursData} 
+        currentTime={mockCurrentTime} 
+        isCurrentWeek={false}
+      />
+    );
+    
+    expect(screen.getByText('No Hours')).toBeInTheDocument();
+    expect(screen.getByText('Pool closed')).toBeInTheDocument();
+  });
+
+  test('handles null dayData gracefully', () => {
+    render(
+      <DayColumn 
+        dayData={null} 
+        currentTime={mockCurrentTime} 
+        isCurrentWeek={false}
+      />
+    );
+    
+    expect(screen.getByText('No data')).toBeInTheDocument();
+  });
+
+  test('applies correct styling for lap vs recreational slots', () => {
+    render(
+      <DayColumn 
+        dayData={mockDayData} 
+        currentTime={mockCurrentTime} 
+        isCurrentWeek={false}
+      />
+    );
+    
+    const lapSlots = screen.getAllByText('LAP');
+    const recSlots = screen.getAllByText('REC');
+    
+    // Check that LAP slots have blue styling
+    lapSlots.forEach(slot => {
+      expect(slot).toHaveClass('bg-blue-600');
+    });
+    
+    // Check that REC slots have orange styling
+    recSlots.forEach(slot => {
+      expect(slot).toHaveClass('bg-orange-500');
+    });
+  });
+
+  test('shows next slot indicator correctly', () => {
+    // Mock current time to be before the first slot
+    const currentTimeBeforeSlots = new Date('2024-01-15T05:00:00.000Z');
+    
+    render(
+      <DayColumn 
+        dayData={mockTodayData} 
+        currentTime={currentTimeBeforeSlots} 
+        isCurrentWeek={true}
+      />
+    );
+    
+    // Should show NEXT indicator for the first upcoming slot
+    expect(screen.getByText('NEXT')).toBeInTheDocument();
+  });
+
+  test('shows past slot styling correctly', () => {
+    // Mock current time to be after all slots
+    const currentTimeAfterSlots = new Date('2024-01-15T18:00:00.000Z');
+    
+    render(
+      <DayColumn 
+        dayData={mockTodayData} 
+        currentTime={currentTimeAfterSlots} 
+        isCurrentWeek={true}
+      />
+    );
+    
+    // All slots should have past styling (opacity-60)
+    const timeSlots = document.querySelectorAll('.opacity-60');
+    expect(timeSlots.length).toBeGreaterThan(0);
+  });
+
+  test('responsive design classes are applied', () => {
+    render(
+      <DayColumn 
+        dayData={mockDayData} 
+        currentTime={mockCurrentTime} 
+        isCurrentWeek={false}
+      />
+    );
+    
+    // Check for responsive width classes on the container
+    const container = document.querySelector('.w-40.sm\\:w-48');
+    expect(container).toBeInTheDocument();
+  });
+});
