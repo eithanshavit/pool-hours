@@ -69,7 +69,7 @@
   - Handle timezone edge cases where UTC day boundaries differ from PST day boundaries
   - _Requirements: 3.1, 3.2, 3.3, 5.6_
 
-- [ ] 9. Refactor main App component to support view switching
+- [x] 9. Refactor main App component to support view switching
 
   - Extract existing daily view logic into separate DailyView component
   - Add state management for current view mode (daily/combined weekly)

@@ -10,10 +10,10 @@ import WeeklyCalendar from './WeeklyCalendar';
  * 
  * @param {Object} props
  * @param {Date} props.currentTime - Current time for highlighting active sessions
- * @param {Function} props.onRefresh - Optional callback to refresh all data
+
  * @returns {JSX.Element}
  */
-export default function CombinedCalendarView({ currentTime, onRefresh }) {
+export default function CombinedCalendarView({ currentTime }) {
   // State for today's data
   const [todayData, setTodayData] = useState(null);
   const [todayLoading, setTodayLoading] = useState(true);
@@ -86,11 +86,6 @@ export default function CombinedCalendarView({ currentTime, onRefresh }) {
     fetchTodayData();
     fetchThisWeekData();
     fetchNextWeekData();
-    
-    // Call parent refresh callback if provided
-    if (onRefresh) {
-      onRefresh();
-    }
   };
 
   // Initial data fetch
@@ -103,7 +98,9 @@ export default function CombinedCalendarView({ currentTime, onRefresh }) {
   // Auto-refresh every 5 minutes
   useEffect(() => {
     const interval = setInterval(() => {
-      refreshAllData();
+      fetchTodayData();
+      fetchThisWeekData();
+      fetchNextWeekData();
     }, 5 * 60 * 1000); // 5 minutes
 
     return () => clearInterval(interval);

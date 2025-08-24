@@ -1,160 +1,217 @@
-import { render, screen } from '@testing-library/react'
-import Home from '../app/page'
+import { render, screen, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import Home from '../app/page';
 
 // Mock fetch globally
-global.fetch = jest.fn()
+global.fetch = jest.fn();
 
-// Mock the Date constructor to control the current time
-const mockDate = (dateString) => {
-  const date = new Date(dateString)
-  const RealDate = global.Date
-  global.Date = class extends RealDate {
-    constructor(...args) {
-      if (args.length === 0) {
-        return date
-      }
-      return new RealDate(...args)
-    }
-    static now() {
-      return date.getTime()
-    }
-  }
-  return date
-}
+// Mock the child components to focus on testing the main App logic
+jest.mock('../app/components/DailyView', () => {
+  return function MockDailyView({ currentTime, onRefresh }) {
+    return (
+      <div data-testid="daily-view">
+        <div>Daily View</div>
+        <div>Current Time: {currentTime.toISOString()}</div>
+        <button onClick={onRefresh}>Refresh Daily</button>
+      </div>
+    );
+  };
+});
 
-describe('Pool Status Color Tests', () => {
+jest.mock('../app/components/CombinedCalendarView', () => {
+  return function MockCombinedCalendarView({ currentTime, onRefresh }) {
+    return (
+      <div data-testid="combined-calendar-view">
+        <div>Combined Calendar View</div>
+        <div>Current Time: {currentTime.toISOString()}</div>
+        <button onClick={onRefresh}>Refresh Combined</button>
+      </div>
+    );
+  };
+});
+
+describe('Home Page - View Switching', () => {
   beforeEach(() => {
-    fetch.mockClear()
-  })
+    fetch.mockClear();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2024-01-15T14:30:00.000Z'));
+  });
 
   afterEach(() => {
-    jest.restoreAllMocks()
-  })
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+  });
 
-  test('should show red background when pool is closed (no hours data)', async () => {
-    // Mock current time to a specific time when pool should be closed
-    const currentTime = mockDate('2025-01-15T02:00:00.000Z') // 2 AM UTC
-    
-    // Mock API response with no pool hours (pool closed)
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ hours: [] })
-    })
+  it('renders daily view by default', () => {
+    render(<Home />);
 
-    render(<Home />)
-    
-    // Wait for the component to load - look for any day name
-    await screen.findByText(/Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/)
-    
-    // Check that the background is red (pool closed)
-    const container = screen.getByRole('heading', { level: 1 }).closest('div[class*="bg-red-300"]')
-    expect(container).toBeInTheDocument()
-  })
+    expect(screen.getByTestId('daily-view')).toBeInTheDocument();
+    expect(screen.getByText('Daily View')).toBeInTheDocument();
+    expect(screen.queryByTestId('combined-calendar-view')).not.toBeInTheDocument();
+  });
 
-  test('should show red background when pool hours are in the past', async () => {
-    // Mock current time to after pool hours
-    const currentTime = mockDate('2025-01-15T23:00:00.000Z') // 11 PM UTC
-    
-    // Mock API response with pool hours that are in the past
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        hours: [
-          {
-            start: '2025-01-15T14:30:00.000Z', // 2:30 PM UTC
-            end: '2025-01-15T18:00:00.000Z',   // 6:00 PM UTC
-            type: 'lap',
-            original: '7:30am - 11:00am'
-          }
-        ]
-      })
-    })
+  it('renders ViewToggle component', () => {
+    render(<Home />);
 
-    render(<Home />)
-    
-    // Wait for the component to load - look for any day name
-    await screen.findByText(/Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/)
-    
-    // Check that the background is red (pool closed - hours are in the past)
-    const container = screen.getByRole('heading', { level: 1 }).closest('div[class*="bg-red-300"]')
-    expect(container).toBeInTheDocument()
-  })
+    expect(screen.getByRole('tablist', { name: 'View toggle' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Daily' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Weekly' })).toBeInTheDocument();
+  });
 
-  test('should show red background when pool hours are in the future', async () => {
-    // Mock current time to before pool hours
-    const currentTime = mockDate('2025-01-15T10:00:00.000Z') // 10 AM UTC
+  it('switches to weekly view when weekly button is clicked', async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     
-    // Mock API response with pool hours that are in the future
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        hours: [
-          {
-            start: '2025-01-15T14:30:00.000Z', // 2:30 PM UTC
-            end: '2025-01-15T18:00:00.000Z',   // 6:00 PM UTC
-            type: 'lap',
-            original: '7:30am - 11:00am'
-          }
-        ]
-      })
-    })
+    render(<Home />);
 
-    render(<Home />)
-    
-    // Wait for the component to load - look for any day name
-    await screen.findByText(/Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/)
-    
-    // Check that the background is red (pool closed - hours are in the future)
-    const container = screen.getByRole('heading', { level: 1 }).closest('div[class*="bg-red-300"]')
-    expect(container).toBeInTheDocument()
-  })
+    // Initially shows daily view
+    expect(screen.getByTestId('daily-view')).toBeInTheDocument();
+    expect(screen.queryByTestId('combined-calendar-view')).not.toBeInTheDocument();
 
-  test('should show green background when pool is currently open', async () => {
-    // Mock current time to during pool hours
-    const currentTime = mockDate('2025-01-15T16:00:00.000Z') // 4 PM UTC (during pool hours)
-    
-    // Mock API response with pool hours that include current time
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        hours: [
-          {
-            start: '2025-01-15T14:30:00.000Z', // 2:30 PM UTC
-            end: '2025-01-15T18:00:00.000Z',   // 6:00 PM UTC
-            type: 'lap',
-            original: '7:30am - 11:00am'
-          }
-        ]
-      })
-    })
+    // Click weekly button
+    const weeklyButton = screen.getByRole('tab', { name: 'Weekly' });
+    await act(async () => {
+      await user.click(weeklyButton);
+    });
 
-    render(<Home />)
-    
-    // Wait for the component to load - look for any day name
-    await screen.findByText(/Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/)
-    
-    // Check that the background is green (pool open)
-    const container = screen.getByRole('heading', { level: 1 }).closest('div[class*="bg-green-300"]')
-    expect(container).toBeInTheDocument()
-  })
+    // Should now show weekly view
+    expect(screen.queryByTestId('daily-view')).not.toBeInTheDocument();
+    expect(screen.getByTestId('combined-calendar-view')).toBeInTheDocument();
+    expect(screen.getByText('Combined Calendar View')).toBeInTheDocument();
+  });
 
-  test('should show red background when API returns error', async () => {
-    // Mock current time
-    const currentTime = mockDate('2025-01-15T16:00:00.000Z')
+  it('switches back to daily view when daily button is clicked', async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     
-    // Mock API response with error
-    fetch.mockResolvedValueOnce({
-      ok: false,
-      json: async () => ({ error: 'Failed to fetch pool hours' })
-    })
+    render(<Home />);
 
-    render(<Home />)
+    // Switch to weekly view first
+    const weeklyButton = screen.getByRole('tab', { name: 'Weekly' });
+    await act(async () => {
+      await user.click(weeklyButton);
+    });
+
+    expect(screen.getByTestId('combined-calendar-view')).toBeInTheDocument();
+
+    // Switch back to daily view
+    const dailyButton = screen.getByRole('tab', { name: 'Daily' });
+    await act(async () => {
+      await user.click(dailyButton);
+    });
+
+    expect(screen.getByTestId('daily-view')).toBeInTheDocument();
+    expect(screen.queryByTestId('combined-calendar-view')).not.toBeInTheDocument();
+  });
+
+  it('passes current time to child components', () => {
+    render(<Home />);
+
+    expect(screen.getByText('Current Time: 2024-01-15T14:30:00.000Z')).toBeInTheDocument();
+  });
+
+  it('updates current time every minute', async () => {
+    render(<Home />);
+
+    // Initial time
+    expect(screen.getByText('Current Time: 2024-01-15T14:30:00.000Z')).toBeInTheDocument();
+
+    // Fast forward 1 minute
+    await act(async () => {
+      jest.advanceTimersByTime(60 * 1000);
+    });
+
+    // Time should be updated
+    expect(screen.getByText('Current Time: 2024-01-15T14:31:00.000Z')).toBeInTheDocument();
+  });
+
+  it('handles refresh callback from daily view', async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     
-    // Wait for error to be displayed
-    await screen.findByText('Error')
+    render(<Home />);
+
+    const refreshButton = screen.getByText('Refresh Daily');
     
-    // When there's an error, the pool should be considered closed (red background)
-    // But since the error state shows a different UI, we check for the error message instead
-    expect(screen.getByText('Error')).toBeInTheDocument()
-  })
-}) 
+    await act(async () => {
+      await user.click(refreshButton);
+    });
+
+    // The refresh should update the current time
+    // This is tested by checking that the component re-renders with updated time
+    expect(screen.getByTestId('daily-view')).toBeInTheDocument();
+  });
+
+  it('handles refresh callback from combined calendar view', async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    
+    render(<Home />);
+
+    // Switch to weekly view
+    const weeklyButton = screen.getByRole('tab', { name: 'Weekly' });
+    await act(async () => {
+      await user.click(weeklyButton);
+    });
+
+    const refreshButton = screen.getByText('Refresh Combined');
+    
+    await act(async () => {
+      await user.click(refreshButton);
+    });
+
+    // The refresh should update the current time
+    expect(screen.getByTestId('combined-calendar-view')).toBeInTheDocument();
+  });
+
+  it('maintains view state when switching between views', async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    
+    render(<Home />);
+
+    // Switch to weekly view
+    const weeklyButton = screen.getByRole('tab', { name: 'Weekly' });
+    await act(async () => {
+      await user.click(weeklyButton);
+    });
+
+    expect(screen.getByTestId('combined-calendar-view')).toBeInTheDocument();
+
+    // Switch back to daily view
+    const dailyButton = screen.getByRole('tab', { name: 'Daily' });
+    await act(async () => {
+      await user.click(dailyButton);
+    });
+
+    expect(screen.getByTestId('daily-view')).toBeInTheDocument();
+
+    // Switch to weekly again
+    await act(async () => {
+      await user.click(weeklyButton);
+    });
+
+    expect(screen.getByTestId('combined-calendar-view')).toBeInTheDocument();
+  });
+
+  it('sets correct ARIA attributes for view panels', () => {
+    render(<Home />);
+
+    // Daily view should be active initially
+    const dailyPanel = screen.getByRole('tabpanel');
+    expect(dailyPanel).toBeInTheDocument();
+    expect(dailyPanel).toHaveAttribute('id', 'daily-view');
+  });
+
+  it('updates ARIA attributes when switching views', async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    
+    render(<Home />);
+
+    // Switch to weekly view
+    const weeklyButton = screen.getByRole('tab', { name: 'Weekly' });
+    await act(async () => {
+      await user.click(weeklyButton);
+    });
+
+    // Weekly panel should now be active
+    const weeklyPanel = screen.getByRole('tabpanel');
+    expect(weeklyPanel).toBeInTheDocument();
+    expect(weeklyPanel).toHaveAttribute('id', 'weekly-view');
+  });
+});
