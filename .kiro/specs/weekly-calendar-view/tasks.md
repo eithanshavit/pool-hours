@@ -51,7 +51,7 @@
   - Add week header to distinguish "This Week" vs "Next Week" sections
   - _Requirements: 1.1, 1.2, 1.5, 4.1, 4.2, 6.3_
 
-- [ ] 7. Create CombinedCalendarView component for single-page layout
+- [x] 7. Create CombinedCalendarView component for single-page layout
 
   - Implement main container that displays today's highlight, this week, and next week in sequence
   - Manage data fetching for today's data plus both weeks using the weekly API endpoint
