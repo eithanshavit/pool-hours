@@ -9,7 +9,7 @@
   - Add proper error handling for partial week data failures
   - _Requirements: 1.1, 5.1, 5.2, 6.1, 6.3, 6.4_
 
-- [ ] 2. Implement date and week calculation utilities
+- [x] 2. Implement date and week calculation utilities
 
   - Create utility functions for calculating week boundaries (Monday to Sunday) in UTC
   - Implement week offset calculations (0 = this week, 1 = next week) using UTC dates
@@ -18,7 +18,7 @@
   - Write unit tests for date calculation edge cases including timezone boundaries
   - _Requirements: 1.1, 5.2, 5.3_
 
-- [ ] 3. Create ViewToggle component for switching between daily and weekly views
+- [x] 3. Create ViewToggle component for switching between daily and weekly views
 
   - Implement toggle component with clear visual states for daily/weekly modes
   - Add proper accessibility attributes and keyboard navigation
