@@ -60,7 +60,7 @@
   - Ensure responsive layout that works on mobile and desktop
   - _Requirements: 1.1, 5.1, 5.2, 6.1, 6.2, 6.5_
 
-- [ ] 8. Add current time indicators and session highlighting
+- [x] 8. Add current time indicators and session highlighting
 
   - Implement logic to highlight currently active sessions for today's section only
   - Add "NOW" and "NEXT" indicators for current day sessions, converting UTC to PST for display
