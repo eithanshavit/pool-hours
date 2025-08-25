@@ -18,10 +18,12 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const weekOffset = parseInt(searchParams.get("weekOffset") || "0");
+    const clientTimezone = searchParams.get("timezone") || "America/Los_Angeles";
 
     console.log("// DEBUG PRINT - weekly-hours - weekOffset:", weekOffset);
+    console.log("// DEBUG PRINT - weekly-hours - clientTimezone:", clientTimezone);
 
-    const result = await aggregateWeeklyPoolHours(weekOffset);
+    const result = await aggregateWeeklyPoolHours(weekOffset, clientTimezone);
 
     return Response.json(result);
   } catch (error) {
@@ -43,10 +45,11 @@ export async function GET(request) {
 /**
  * Aggregates pool hours for a full week by fetching data for each day
  * @param {number} weekOffset - Number of weeks from current week (0 = this week, 1 = next week)
+ * @param {string} clientTimezone - Client's timezone (e.g., "America/Los_Angeles")
  * @returns {Object} Object containing weekly pool data
  */
-async function aggregateWeeklyPoolHours(weekOffset) {
-  const { weekStart, weekEnd } = getWeekBoundaries(weekOffset);
+async function aggregateWeeklyPoolHours(weekOffset, clientTimezone) {
+  const { weekStart, weekEnd } = getWeekBoundaries(weekOffset, clientTimezone);
 
   console.log(
     "// DEBUG PRINT - aggregateWeeklyPoolHours - weekStart:",
@@ -76,18 +79,18 @@ async function aggregateWeeklyPoolHours(weekOffset) {
         dayName: currentDay.format("dddd"),
         hours: dayData.hours || [],
         error: dayData.error,
-        // Compare days in Pacific timezone to handle edge cases where UTC day boundaries
-        // differ from PST/PDT day boundaries (e.g., 11 PM PST = 7 AM UTC next day)
-        isToday: currentDay.isSame(moment().tz("America/Los_Angeles"), "day"),
+        // Compare days in client timezone to handle edge cases where UTC day boundaries
+        // differ from client timezone day boundaries
+        isToday: currentDay.tz(clientTimezone).isSame(moment().tz(clientTimezone), "day"),
       }))
       .catch((error) => ({
         date: dateString,
         dayName: currentDay.format("dddd"),
         hours: [],
         error: `Failed to fetch data for ${dateString}: ${error.message}`,
-        // Compare days in Pacific timezone to handle edge cases where UTC day boundaries
-        // differ from PST/PDT day boundaries (e.g., 11 PM PST = 7 AM UTC next day)
-        isToday: currentDay.isSame(moment().tz("America/Los_Angeles"), "day"),
+        // Compare days in client timezone to handle edge cases where UTC day boundaries
+        // differ from client timezone day boundaries
+        isToday: currentDay.tz(clientTimezone).isSame(moment().tz(clientTimezone), "day"),
       }));
 
     dayPromises.push(dayPromise);
@@ -118,13 +121,14 @@ async function aggregateWeeklyPoolHours(weekOffset) {
 }
 
 /**
- * Calculates week boundaries (Monday to Sunday) in UTC based on offset
+ * Calculates week boundaries (Monday to Sunday) based on client timezone, returns UTC dates
  * @param {number} weekOffset - Number of weeks from current week
+ * @param {string} clientTimezone - Client's timezone (e.g., "America/Los_Angeles")
  * @returns {Object} Object with weekStart and weekEnd moment objects in UTC
  */
-function getWeekBoundaries(weekOffset) {
-  // Start with current UTC date
-  const now = moment().utc();
+function getWeekBoundaries(weekOffset, clientTimezone) {
+  // Start with current time in client timezone
+  const now = moment().tz(clientTimezone);
 
   // Calculate the start of the target week (Monday)
   // moment.js uses 0=Sunday, 1=Monday, so we need to adjust
@@ -135,13 +139,18 @@ function getWeekBoundaries(weekOffset) {
     .clone()
     .add(weekOffset, "weeks")
     .add(daysToMonday, "days")
-    .startOf("day");
+    .startOf("day")
+    .utc(); // Convert to UTC for API consistency
 
   const weekEnd = weekStart.clone().add(6, "days").endOf("day");
 
   console.log(
-    "// DEBUG PRINT - getWeekBoundaries - now:",
+    "// DEBUG PRINT - getWeekBoundaries - now (client timezone):",
     now.format("YYYY-MM-DD dddd")
+  );
+  console.log(
+    "// DEBUG PRINT - getWeekBoundaries - clientTimezone:",
+    clientTimezone
   );
   console.log(
     "// DEBUG PRINT - getWeekBoundaries - currentDayOfWeek:",
@@ -152,11 +161,11 @@ function getWeekBoundaries(weekOffset) {
     daysToMonday
   );
   console.log(
-    "// DEBUG PRINT - getWeekBoundaries - weekStart:",
+    "// DEBUG PRINT - getWeekBoundaries - weekStart (UTC):",
     weekStart.format("YYYY-MM-DD dddd")
   );
   console.log(
-    "// DEBUG PRINT - getWeekBoundaries - weekEnd:",
+    "// DEBUG PRINT - getWeekBoundaries - weekEnd (UTC):",
     weekEnd.format("YYYY-MM-DD dddd")
   );
 

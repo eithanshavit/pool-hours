@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 /**
  * TodayHighlight component for displaying today's pool hours prominently
- * 
+ *
  * @param {Object} props
  * @param {Object} props.poolData - Today's pool data from API
  * @param {boolean} props.loading - Loading state
@@ -13,15 +13,21 @@ import { useState, useEffect } from 'react';
  * @param {Function} props.onRefresh - Callback to refresh data
  * @returns {JSX.Element}
  */
-export default function TodayHighlight({ poolData, loading, error, currentTime, onRefresh }) {
+export default function TodayHighlight({
+  poolData,
+  loading,
+  error,
+  currentTime,
+  onRefresh,
+}) {
   // Calculate if pool is currently open based on the time slots
   const calculateIsOpen = (hours) => {
     if (!hours || hours.length === 0) return false;
-    
+
     const now = currentTime || new Date();
-    
+
     // Check if current time falls within any time slot
-    return hours.some(slot => {
+    return hours.some((slot) => {
       const slotStart = new Date(slot.start);
       const slotEnd = new Date(slot.end);
       return now >= slotStart && now <= slotEnd;
@@ -31,49 +37,57 @@ export default function TodayHighlight({ poolData, loading, error, currentTime, 
   // Find the next slot that hasn't started yet
   const findNextSlot = (hours) => {
     if (!hours || hours.length === 0) return null;
-    
+
     // Sort slots by start time
-    const sortedSlots = [...hours].sort((a, b) => new Date(a.start) - new Date(b.start));
-    
+    const sortedSlots = [...hours].sort(
+      (a, b) => new Date(a.start) - new Date(b.start)
+    );
+
     // Find the first slot that starts after current time
-    const nextSlot = sortedSlots.find(slot => new Date(slot.start) > currentTime);
-    
+    const nextSlot = sortedSlots.find(
+      (slot) => new Date(slot.start) > currentTime
+    );
+
     return nextSlot;
   };
 
   const isCurrentOrNextSlot = (slot) => {
     const slotStart = new Date(slot.start);
     const slotEnd = new Date(slot.end);
-    
+
     // If current time is within the slot, it's current
     if (currentTime >= slotStart && currentTime <= slotEnd) {
-      return 'current';
+      return "current";
     }
-    
+
     // Check if this is the next slot (the first future slot)
     const nextSlot = findNextSlot(poolData?.hours || []);
-    if (nextSlot && slot.start === nextSlot.start && slot.type === nextSlot.type) {
-      return 'next';
+    if (
+      nextSlot &&
+      slot.start === nextSlot.start &&
+      slot.type === nextSlot.type
+    ) {
+      return "next";
     }
-    
+
     return null;
   };
 
   const formatTime = (timestamp) => {
-    return new Date(timestamp).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
+    return new Date(timestamp).toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
       hour12: true,
-      timeZone: 'America/Los_Angeles'
+      timeZone: "America/Los_Angeles",
     });
   };
 
   const getBackgroundColor = (isOpen) => {
-    return isOpen ? 'bg-green-300' : 'bg-red-300';
+    return isOpen ? "bg-green-300" : "bg-red-300";
   };
 
   const getTextColor = (isOpen) => {
-    return isOpen ? 'text-gray-800' : 'text-white';
+    return isOpen ? "text-gray-800" : "text-white";
   };
 
   // Calculate if pool is open based on current time and available slots
@@ -82,10 +96,12 @@ export default function TodayHighlight({ poolData, loading, error, currentTime, 
   if (loading) {
     return (
       <div className="w-full max-w-3xl mx-auto">
-        <div className="bg-white rounded-lg shadow-sm p-3 responsive-transition">
+        <div className="bg-white rounded-lg shadow-sm px-3 py-2.5 responsive-transition">
           <div className="text-center">
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500 mx-auto mb-2"></div>
-            <p className="text-gray-600 text-sm font-medium">Loading today's hours...</p>
+            <p className="text-gray-600 text-sm font-medium">
+              Loading today's hours...
+            </p>
           </div>
         </div>
       </div>
@@ -95,9 +111,11 @@ export default function TodayHighlight({ poolData, loading, error, currentTime, 
   if (error) {
     return (
       <div className="w-full max-w-3xl mx-auto">
-        <div className="bg-white rounded-lg shadow-sm p-3 responsive-transition contrast-enhanced">
+        <div className="bg-white rounded-lg shadow-sm px-3 py-2.5 responsive-transition contrast-enhanced">
           <div className="text-center">
-            <div className="text-red-600 font-bold text-sm mb-1">Error Loading Today's Hours</div>
+            <div className="text-red-600 font-bold text-sm mb-1">
+              Error Loading Today's Hours
+            </div>
             <p className="text-gray-600 text-xs mb-2">{error}</p>
             {onRefresh && (
               <button
@@ -114,69 +132,79 @@ export default function TodayHighlight({ poolData, loading, error, currentTime, 
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
+    <div className="w-full max-w-xl mx-auto">
       {/* Compact Today's Highlight Card */}
-      <div className={`${getBackgroundColor(isOpenNow)} rounded-lg shadow-sm transition-all duration-500 p-3 border-2 border-white responsive-transition contrast-enhanced`}>
+      <div
+        className={`${getBackgroundColor(
+          isOpenNow
+        )} rounded-lg shadow-sm transition-all duration-500 px-3 py-2.5 border-2 border-white responsive-transition contrast-enhanced`}
+      >
         <div className={getTextColor(isOpenNow)}>
           {/* Compact Header Section */}
-          <div className="text-center mb-3">
+          <div className="text-center mb-2">
             <div className="flex flex-col xs:flex-row items-center justify-center gap-1 xs:gap-2">
-              <h1 className="text-lg xs:text-xl sm:text-2xl font-bold">
+              <h1 className="text-base xs:text-lg sm:text-xl font-bold">
                 TODAY
               </h1>
-              <div className="text-sm xs:text-base sm:text-lg font-semibold">
-                {currentTime.toLocaleDateString('en-US', { 
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric'
+              <div className="text-xs xs:text-sm sm:text-base font-semibold">
+                {currentTime.toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
                 })}
               </div>
             </div>
-            <div className="mt-1 text-sm sm:text-base font-medium opacity-90">
-              {isOpenNow ? 'Pool is OPEN' : 'Pool is CLOSED'}
+            <div className="mt-0.5 text-xs sm:text-sm font-medium opacity-90">
+              {isOpenNow ? "Pool is OPEN" : "Pool is CLOSED"}
             </div>
           </div>
 
           {/* Compact Pool Hours Section */}
           {poolData?.hours && poolData.hours.length > 0 ? (
-            <div className="grid gap-2">
+            <div className="grid gap-1.5">
               {poolData.hours.map((slot, index) => {
                 const slotStatus = isCurrentOrNextSlot(slot);
-                const isHighlighted = slotStatus === 'current' || slotStatus === 'next';
-                const isPast = slotStatus === null && new Date(slot.end) < currentTime;
-                const isLap = slot.type === 'lap';
-                
+                const isHighlighted =
+                  slotStatus === "current" || slotStatus === "next";
+                const isPast =
+                  slotStatus === null && new Date(slot.end) < currentTime;
+                const isLap = slot.type === "lap";
+
                 return (
-                  <div 
-                    key={index} 
-                    className={`p-2 rounded-lg transition-all duration-300 ${
-                      isHighlighted 
-                        ? 'bg-white bg-opacity-90 shadow-sm transform scale-105' 
-                        : isPast 
-                        ? 'bg-white bg-opacity-20 opacity-60'
+                  <div
+                    key={index}
+                    className={`px-2 py-4 rounded-lg transition-all duration-300 ${
+                      isHighlighted
+                        ? "bg-white bg-opacity-90 shadow-sm transform scale-105"
+                        : isPast
+                        ? "bg-white bg-opacity-20 opacity-60"
                         : isLap
-                        ? 'bg-blue-600 bg-opacity-40'
-                        : 'bg-orange-500 bg-opacity-40'
+                        ? "bg-blue-600 bg-opacity-40"
+                        : "bg-orange-500 bg-opacity-40"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <span className={`px-2 py-1 rounded text-xs font-bold ${
-                          isHighlighted 
-                            ? 'bg-gray-800 text-white' 
-                            : 'bg-black bg-opacity-30 text-white'
-                        }`}>
-                          {slot.type === 'lap' ? 'LAP SWIM' : 'RECREATIONAL'}
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-xs font-bold ${
+                            isHighlighted
+                              ? "bg-gray-800 text-white"
+                              : "bg-black bg-opacity-30 text-white"
+                          }`}
+                        >
+                          {slot.type === "lap" ? "LAP" : "REC"}
                         </span>
                         {isHighlighted && (
                           <span className="px-1 py-0.5 bg-red-500 text-white text-xs font-bold rounded animate-pulse">
-                            {slotStatus === 'current' ? 'NOW' : 'NEXT'}
+                            {slotStatus === "current" ? "NOW" : "NEXT"}
                           </span>
                         )}
                       </div>
-                      <div className={`text-sm font-semibold ${
-                        isHighlighted ? 'text-gray-900' : ''
-                      }`}>
+                      <div
+                        className={`text-xs font-semibold ${
+                          isHighlighted ? "text-gray-900" : ""
+                        }`}
+                      >
                         {formatTime(slot.start)} - {formatTime(slot.end)}
                       </div>
                     </div>
@@ -185,21 +213,27 @@ export default function TodayHighlight({ poolData, loading, error, currentTime, 
               })}
             </div>
           ) : (
-            <div className="text-center py-4">
-              <div className="text-sm font-semibold mb-1">No pool hours available</div>
-              <div className="text-xs opacity-80">Check back later for updates</div>
+            <div className="text-center py-3">
+              <div className="text-xs font-semibold mb-1">
+                No pool hours available
+              </div>
+              <div className="text-xs opacity-80">
+                Check back later for updates
+              </div>
             </div>
           )}
 
           {/* Compact Current Time Display */}
-          <div className="mt-3 text-center">
+          <div className="mt-2 text-center">
             <div className="text-xs opacity-75">
-              Current: {currentTime.toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
+              Current:{" "}
+              {currentTime.toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
                 hour12: true,
-                timeZone: 'America/Los_Angeles'
-              })} PST
+                timeZone: "America/Los_Angeles",
+              })}{" "}
+              PST
             </div>
           </div>
         </div>

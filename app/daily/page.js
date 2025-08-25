@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import CombinedCalendarView from './components/CombinedCalendarView';
+import DailyView from '../components/DailyView';
 
-export default function Home() {
+export default function DailyPage() {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // Update current time every minute
@@ -19,7 +19,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      <CombinedCalendarView currentTime={currentTime} />
+      <DailyView currentTime={currentTime} />
     </div>
   );
-} 
+}

@@ -167,10 +167,13 @@ describe('DayColumn Component', () => {
   });
 
   test('applies correct styling for lap vs recreational slots', () => {
+    // Use a time before all slots to ensure they're not past
+    const futureTime = new Date('2024-01-15T05:00:00.000Z'); // 5 AM, before all slots
+    
     render(
       <DayColumn 
         dayData={mockDayData} 
-        currentTime={mockCurrentTime} 
+        currentTime={futureTime} 
         isCurrentWeek={false}
       />
     );
@@ -178,12 +181,12 @@ describe('DayColumn Component', () => {
     const lapSlots = screen.getAllByText('LAP'); // Full form for better readability
     const recSlots = screen.getAllByText('REC'); // Full form for better readability
     
-    // Check that LAP slots have blue styling
+    // Check that LAP slots have blue styling (when not past)
     lapSlots.forEach(slot => {
       expect(slot).toHaveClass('bg-blue-600');
     });
     
-    // Check that REC slots have orange styling
+    // Check that REC slots have orange styling (when not past)
     recSlots.forEach(slot => {
       expect(slot).toHaveClass('bg-orange-500');
     });
@@ -220,6 +223,27 @@ describe('DayColumn Component', () => {
     // All slots should have past styling (opacity-60)
     const timeSlots = document.querySelectorAll('.opacity-60');
     expect(timeSlots.length).toBeGreaterThan(0);
+  });
+
+  test('grays out past slots on any day', () => {
+    // Mock current time to be after some slots
+    const currentTimeAfterSlots = new Date('2024-01-15T13:00:00.000Z'); // 1 PM
+    
+    render(
+      <DayColumn 
+        dayData={mockDayData} // Not today, but should still gray out past slots
+        currentTime={currentTimeAfterSlots} 
+        isCurrentWeek={true}
+      />
+    );
+    
+    // Should show past styling for slots that ended before current time
+    const pastSlots = document.querySelectorAll('.opacity-60');
+    expect(pastSlots.length).toBeGreaterThan(0); // At least some slots should be grayed out
+    
+    // Future slots should not be grayed out
+    const futureSlots = document.querySelectorAll('.bg-blue-50, .bg-orange-50');
+    expect(futureSlots.length).toBeGreaterThan(0); // At least some slots should have normal colors
   });
 
   test('responsive design classes are applied', () => {

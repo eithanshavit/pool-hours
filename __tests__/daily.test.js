@@ -1,22 +1,22 @@
 import { render, screen, act } from '@testing-library/react';
-import Home from '../app/page';
+import DailyPage from '../app/daily/page';
 
 // Mock fetch globally
 global.fetch = jest.fn();
 
-// Mock the CombinedCalendarView component
-jest.mock('../app/components/CombinedCalendarView', () => {
-  return function MockCombinedCalendarView({ currentTime }) {
+// Mock the DailyView component
+jest.mock('../app/components/DailyView', () => {
+  return function MockDailyView({ currentTime }) {
     return (
-      <div data-testid="combined-calendar-view">
-        <div>Combined Calendar View</div>
+      <div data-testid="daily-view">
+        <div>Daily View</div>
         <div>Current Time: {currentTime.toISOString()}</div>
       </div>
     );
   };
 });
 
-describe('Home Page', () => {
+describe('Daily Page', () => {
   beforeEach(() => {
     fetch.mockClear();
     jest.useFakeTimers();
@@ -28,21 +28,21 @@ describe('Home Page', () => {
     jest.useRealTimers();
   });
 
-  it('renders combined calendar view by default', () => {
-    render(<Home />);
+  it('renders daily view', () => {
+    render(<DailyPage />);
 
-    expect(screen.getByTestId('combined-calendar-view')).toBeInTheDocument();
-    expect(screen.getByText('Combined Calendar View')).toBeInTheDocument();
+    expect(screen.getByTestId('daily-view')).toBeInTheDocument();
+    expect(screen.getByText('Daily View')).toBeInTheDocument();
   });
 
-  it('passes current time to child component', () => {
-    render(<Home />);
+  it('passes current time to daily view component', () => {
+    render(<DailyPage />);
 
     expect(screen.getByText('Current Time: 2024-01-15T14:30:00.000Z')).toBeInTheDocument();
   });
 
   it('updates current time every minute', async () => {
-    render(<Home />);
+    render(<DailyPage />);
 
     // Initial time
     expect(screen.getByText('Current Time: 2024-01-15T14:30:00.000Z')).toBeInTheDocument();

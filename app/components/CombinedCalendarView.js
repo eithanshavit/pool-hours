@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import TodayHighlight from "./TodayHighlight";
 import WeeklyCalendar from "./WeeklyCalendar";
 
@@ -14,10 +14,6 @@ import WeeklyCalendar from "./WeeklyCalendar";
  * @returns {JSX.Element}
  */
 export default function CombinedCalendarView({ currentTime }) {
-  // Refs for smooth scrolling to sections
-  const todayRef = useRef(null);
-  const thisWeekRef = useRef(null);
-  const nextWeekRef = useRef(null);
   // State for today's data
   const [todayData, setTodayData] = useState(null);
   const [todayLoading, setTodayLoading] = useState(true);
@@ -39,7 +35,11 @@ export default function CombinedCalendarView({ currentTime }) {
       setTodayLoading(true);
       setTodayError(null);
 
-      const response = await fetch("/api/pool-hours");
+      // Get today's date in client timezone
+      const today = new Date();
+      const todayStr = today.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+      
+      const response = await fetch(`/api/pool-hours?date=${todayStr}`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -60,8 +60,11 @@ export default function CombinedCalendarView({ currentTime }) {
       setLoading(true);
       setError(null);
 
+      // Get client timezone
+      const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      
       const response = await fetch(
-        `/api/weekly-hours?weekOffset=${weekOffset}`
+        `/api/weekly-hours?weekOffset=${weekOffset}&timezone=${encodeURIComponent(clientTimezone)}`
       );
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -87,23 +90,7 @@ export default function CombinedCalendarView({ currentTime }) {
     fetchWeeklyData(1, setNextWeekData, setNextWeekLoading, setNextWeekError);
   };
 
-  // Refresh all data
-  const refreshAllData = () => {
-    fetchTodayData();
-    fetchThisWeekData();
-    fetchNextWeekData();
-  };
 
-  // Smooth scroll to section
-  const scrollToSection = (ref) => {
-    if (ref.current) {
-      ref.current.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-        inline: "nearest",
-      });
-    }
-  };
 
   // Initial data fetch
   useEffect(() => {
@@ -137,7 +124,7 @@ export default function CombinedCalendarView({ currentTime }) {
         </div>
 
         {/* Today's Highlight Section */}
-        <section ref={todayRef} className="px-2 mb-4 animate-fade-in">
+        <section className="px-2 mb-4 animate-fade-in">
           <TodayHighlight
             poolData={todayData}
             loading={todayLoading}
@@ -148,7 +135,7 @@ export default function CombinedCalendarView({ currentTime }) {
         </section>
 
         {/* This Week Section */}
-        <section ref={thisWeekRef} className="mb-4 animate-fade-in">
+        <section className="mb-4 animate-fade-in">
           <WeeklyCalendar
             weekData={thisWeekData?.weekData}
             currentTime={currentTime}
@@ -162,7 +149,7 @@ export default function CombinedCalendarView({ currentTime }) {
         </section>
 
         {/* Next Week Section */}
-        <section ref={nextWeekRef} className="mb-4 animate-fade-in">
+        <section className="mb-4 animate-fade-in">
           <WeeklyCalendar
             weekData={nextWeekData?.weekData}
             currentTime={currentTime}

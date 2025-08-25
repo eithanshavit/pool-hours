@@ -17,6 +17,8 @@ export default function DayColumn({
   isCurrentWeek = false,
   loading = false,
   error = null,
+  nextOpeningInfo = null,
+  dayIndex = 0,
 }) {
   // Find the next slot that hasn't started yet
   const findNextSlot = (hours) => {
@@ -36,27 +38,36 @@ export default function DayColumn({
   };
 
   const isCurrentOrNextSlot = (slot) => {
-    // Only show current/next indicators for today and current week
-    if (!isCurrentWeek || !dayData?.isToday) {
-      return null;
-    }
-
     const slotStart = new Date(slot.start);
     const slotEnd = new Date(slot.end);
 
-    // If current time is within the slot, it's current
-    if (currentTime >= slotStart && currentTime <= slotEnd) {
+    // If current time is within the slot and it's today, it's current
+    if (dayData?.isToday && currentTime >= slotStart && currentTime <= slotEnd) {
       return "current";
     }
 
-    // Check if this is the next slot (the first future slot)
-    const nextSlot = findNextSlot(dayData?.hours || []);
-    if (
-      nextSlot &&
-      slot.start === nextSlot.start &&
-      slot.type === nextSlot.type
-    ) {
-      return "next";
+    // Check if this is the next slot across the entire week
+    if (nextOpeningInfo && nextOpeningInfo.slot) {
+      const nextSlot = nextOpeningInfo.slot;
+      if (
+        slot.start === nextSlot.start &&
+        slot.type === nextSlot.type &&
+        dayIndex === nextOpeningInfo.dayIndex
+      ) {
+        return "next";
+      }
+    }
+
+    // For today only, also check if this is the next slot within today
+    if (dayData?.isToday) {
+      const nextSlot = findNextSlot(dayData?.hours || []);
+      if (
+        nextSlot &&
+        slot.start === nextSlot.start &&
+        slot.type === nextSlot.type
+      ) {
+        return "next";
+      }
     }
 
     return null;
@@ -82,19 +93,19 @@ export default function DayColumn({
   // Loading state
   if (loading) {
     return (
-      <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200 p-3 responsive-transition">
+      <div className="w-full min-w-0 bg-white rounded-lg shadow-sm border border-gray-200 px-2 py-2.5 responsive-transition overflow-hidden">
         {/* Day header skeleton */}
-        <div className="text-center mb-3 pb-2 border-b border-gray-200">
+        <div className="text-center mb-2 pb-1.5 border-b border-gray-200">
           <div className="h-4 bg-gray-200 rounded animate-pulse mb-2"></div>
           <div className="h-3 bg-gray-200 rounded animate-pulse w-10 mx-auto"></div>
         </div>
 
         {/* Time slots skeleton */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {[1, 2].map((i) => (
             <div
               key={i}
-              className="h-12 bg-gray-100 rounded animate-pulse"
+              className="h-10 bg-gray-100 rounded animate-pulse"
             ></div>
           ))}
         </div>
@@ -105,9 +116,9 @@ export default function DayColumn({
   // Error state
   if (error) {
     return (
-      <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200 p-3 responsive-transition contrast-enhanced">
+      <div className="w-full min-w-0 bg-white rounded-lg shadow-sm border border-gray-200 px-2 py-2.5 responsive-transition contrast-enhanced overflow-hidden">
         {/* Day header */}
-        <div className="text-center mb-3 pb-2 border-b border-gray-200">
+        <div className="text-center mb-2 pb-1.5 border-b border-gray-200">
           <div className="font-bold text-gray-900 text-sm">
             {dayData?.dayName || "Unknown"}
           </div>
@@ -117,8 +128,8 @@ export default function DayColumn({
         </div>
 
         {/* Error message */}
-        <div className="text-center py-3">
-          <div className="text-red-500 text-xs font-medium mb-2">Error</div>
+        <div className="text-center py-2">
+          <div className="text-red-500 text-xs font-medium mb-1">Error</div>
           <div className="text-gray-400 text-xs break-words">{error}</div>
         </div>
       </div>
@@ -128,8 +139,8 @@ export default function DayColumn({
   // No data state
   if (!dayData) {
     return (
-      <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200 p-3 responsive-transition">
-        <div className="text-center py-6">
+      <div className="w-full min-w-0 bg-white rounded-lg shadow-sm border border-gray-200 px-2 py-2.5 responsive-transition overflow-hidden">
+        <div className="text-center py-4">
           <div className="text-gray-400 text-xs">No data</div>
         </div>
       </div>
@@ -138,14 +149,14 @@ export default function DayColumn({
 
   return (
     <div
-      className={`w-full bg-white rounded-lg shadow-sm border transition-all duration-200 p-3 responsive-transition contrast-enhanced ${
+      className={`w-full min-w-0 bg-white rounded-lg shadow-sm border transition-all duration-200 px-2 py-2.5 responsive-transition contrast-enhanced overflow-hidden ${
         dayData.isToday
           ? "border-blue-400 shadow-md ring-2 ring-blue-100"
           : "border-gray-200 hover:shadow-md"
       }`}
     >
       {/* Day Header */}
-      <div className="text-center mb-3 pb-2 border-b border-gray-200">
+      <div className="text-center mb-2 pb-1.5 border-b border-gray-200">
         <div
           className={`font-bold text-sm ${
             dayData.isToday ? "text-blue-600" : "text-gray-900"
@@ -160,25 +171,29 @@ export default function DayColumn({
         >
           {formatDate(dayData.date)}
         </div>
+        {dayData.isToday && (
+          <div className="text-xs mt-1 text-blue-600 font-medium">
+            Today
+          </div>
+        )}
       </div>
 
       {/* Time Slots */}
       {dayData.hours && dayData.hours.length > 0 ? (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {dayData.hours.map((slot, index) => {
             const slotStatus = isCurrentOrNextSlot(slot);
             const isHighlighted =
               slotStatus === "current" || slotStatus === "next";
             const isPast =
               slotStatus === null &&
-              new Date(slot.end) < currentTime &&
-              dayData.isToday;
+              new Date(slot.end) < currentTime;
             const isLap = slot.type === "lap";
 
             return (
               <div
                 key={index}
-                className={`p-2 rounded-lg text-xs transition-all duration-200 touch-manipulation ${
+                className={`px-1.5 py-1.5 rounded-lg text-xs transition-all duration-200 touch-manipulation ${
                   isHighlighted
                     ? "bg-green-100 border-2 border-green-400 shadow-sm transform scale-105"
                     : isPast
@@ -188,9 +203,9 @@ export default function DayColumn({
                     : "bg-orange-50 border border-orange-200"
                 }`}
               >
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-1">
                   <span
-                    className={`px-2 py-1 rounded text-xs font-bold ${
+                    className={`px-1.5 py-0.5 rounded text-xs font-bold ${
                       isHighlighted
                         ? "bg-green-600 text-white"
                         : isPast
@@ -219,16 +234,16 @@ export default function DayColumn({
                       : "text-orange-700"
                   }`}
                 >
-                  <div className="font-semibold">{formatTime(slot.start)}</div>
-                  <div className="text-xs opacity-75 my-1">to</div>
-                  <div className="font-semibold">{formatTime(slot.end)}</div>
+                  <div className="font-semibold truncate">
+                    {formatTime(slot.start)} - {formatTime(slot.end)}
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
       ) : (
-        <div className="text-center py-4">
+        <div className="text-center py-3">
           <div className="text-gray-400 text-xs font-medium mb-1">No Hours</div>
           <div className="text-gray-300 text-xs">Pool Closed</div>
         </div>
