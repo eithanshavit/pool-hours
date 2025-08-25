@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+
 
 /**
  * TodayHighlight component for displaying today's pool hours prominently
@@ -11,6 +11,7 @@ import { useState, useEffect } from "react";
  * @param {string} props.error - Error message if any
  * @param {Date} props.currentTime - Current time for highlighting active sessions
  * @param {Function} props.onRefresh - Callback to refresh data
+ * @param {boolean} props.compact - Whether to show compact widget mode
  * @returns {JSX.Element}
  */
 export default function TodayHighlight({
@@ -19,6 +20,7 @@ export default function TodayHighlight({
   error,
   currentTime,
   onRefresh,
+  compact = false,
 }) {
   // Calculate if pool is currently open based on the time slots
   const calculateIsOpen = (hours) => {
@@ -93,15 +95,82 @@ export default function TodayHighlight({
   // Calculate if pool is open based on current time and available slots
   const isOpenNow = poolData?.hours ? calculateIsOpen(poolData.hours) : false;
 
+  // Compact widget mode
+  if (compact) {
+    if (loading) {
+      return (
+        <div className="inline-flex items-center gap-2 bg-white rounded-full px-3 py-1.5 shadow-sm border">
+          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
+          <span className="text-xs text-gray-600">Loading today...</span>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="inline-flex items-center gap-2 bg-red-50 rounded-full px-3 py-1.5 shadow-sm border border-red-200">
+          <span className="text-xs text-red-600">Error loading today</span>
+        </div>
+      );
+    }
+
+    // Find current or next slot for compact display
+    const currentSlot = poolData?.hours?.find(slot => {
+      const slotStart = new Date(slot.start);
+      const slotEnd = new Date(slot.end);
+      return currentTime >= slotStart && currentTime <= slotEnd;
+    });
+
+    const nextSlot = findNextSlot(poolData?.hours || []);
+    const displaySlot = currentSlot || nextSlot;
+
+    return (
+      <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 shadow-sm border-2 border-white ${
+        isOpenNow ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+      }`}>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-bold">TODAY</span>
+          <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${
+            isOpenNow ? 'bg-green-200' : 'bg-red-200'
+          }`}>
+            {isOpenNow ? 'OPEN' : 'CLOSED'}
+          </span>
+        </div>
+        {displaySlot && (
+          <>
+            <div className="w-px h-3 bg-gray-300"></div>
+            <div className="flex items-center gap-1">
+              <span className={`text-xs px-1 py-0.5 rounded font-bold ${
+                displaySlot.type === 'lap' ? 'bg-blue-200 text-blue-800' : 'bg-orange-200 text-orange-800'
+              }`}>
+                {displaySlot.type === 'lap' ? 'LAP' : 'REC'}
+              </span>
+              <span className="text-xs font-medium">
+                {formatTime(displaySlot.start)} - {formatTime(displaySlot.end)}
+              </span>
+              {currentSlot && (
+                <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded font-bold animate-pulse">
+                  NOW
+                </span>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
   if (loading) {
     return (
-      <div className="w-full max-w-3xl mx-auto">
-        <div className="bg-white rounded-lg shadow-sm px-3 py-2.5 responsive-transition">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500 mx-auto mb-2"></div>
-            <p className="text-gray-600 text-sm font-medium">
-              Loading today's hours...
-            </p>
+      <div className="w-full">
+        <div className="px-3">
+          <div className="bg-white rounded-lg shadow-sm px-3 py-3 responsive-transition max-w-4xl mx-auto">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500 mx-auto mb-2"></div>
+              <p className="text-gray-600 text-sm font-medium">
+                Loading today's hours...
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -110,21 +179,23 @@ export default function TodayHighlight({
 
   if (error) {
     return (
-      <div className="w-full max-w-3xl mx-auto">
-        <div className="bg-white rounded-lg shadow-sm px-3 py-2.5 responsive-transition contrast-enhanced">
-          <div className="text-center">
-            <div className="text-red-600 font-bold text-sm mb-1">
-              Error Loading Today's Hours
+      <div className="w-full">
+        <div className="px-3">
+          <div className="bg-white rounded-lg shadow-sm px-3 py-3 responsive-transition contrast-enhanced max-w-4xl mx-auto">
+            <div className="text-center">
+              <div className="text-red-600 font-bold text-sm mb-1">
+                Error Loading Today's Hours
+              </div>
+              <p className="text-gray-600 text-xs mb-2">{error}</p>
+              {onRefresh && (
+                <button
+                  onClick={onRefresh}
+                  className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition-colors focus-enhanced"
+                >
+                  Try Again
+                </button>
+              )}
             </div>
-            <p className="text-gray-600 text-xs mb-2">{error}</p>
-            {onRefresh && (
-              <button
-                onClick={onRefresh}
-                className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition-colors focus-enhanced"
-              >
-                Try Again
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -132,30 +203,35 @@ export default function TodayHighlight({
   }
 
   return (
-    <div className="w-full max-w-xl mx-auto">
-      {/* Compact Today's Highlight Card */}
-      <div
-        className={`${getBackgroundColor(
-          isOpenNow
-        )} rounded-lg shadow-sm transition-all duration-500 px-3 py-2.5 border-2 border-white responsive-transition contrast-enhanced`}
-      >
+    <div className="w-full">
+      {/* Today's Highlight Card */}
+      <div className="px-3">
+        <div
+          className={`${getBackgroundColor(
+            isOpenNow
+          )} rounded-lg shadow-sm transition-all duration-500 px-3 py-3 border-2 border-white responsive-transition contrast-enhanced max-w-4xl mx-auto`}
+        >
         <div className={getTextColor(isOpenNow)}>
-          {/* Compact Header Section */}
+          {/* Inline Header Section */}
           <div className="text-center mb-2">
-            <div className="flex flex-col xs:flex-row items-center justify-center gap-1 xs:gap-2">
-              <h1 className="text-base xs:text-lg sm:text-xl font-bold">
-                TODAY
-              </h1>
-              <div className="text-xs xs:text-sm sm:text-base font-semibold">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <h2 className="text-sm sm:text-base font-bold">
+                Today
+              </h2>
+              <span className="text-xs sm:text-sm font-medium opacity-80">
                 {currentTime.toLocaleDateString("en-US", {
                   weekday: "short",
                   month: "short",
                   day: "numeric",
                 })}
-              </div>
-            </div>
-            <div className="mt-0.5 text-xs sm:text-sm font-medium opacity-90">
-              {isOpenNow ? "Pool is OPEN" : "Pool is CLOSED"}
+              </span>
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                isOpenNow 
+                  ? "bg-white bg-opacity-90 text-green-700" 
+                  : "bg-white bg-opacity-90 text-red-700"
+              }`}>
+                {isOpenNow ? "OPEN" : "CLOSED"}
+              </span>
             </div>
           </div>
 
@@ -236,6 +312,7 @@ export default function TodayHighlight({
               PST
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>

@@ -113,26 +113,25 @@ export default function CombinedCalendarView({ currentTime }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 pb-4">
       <div className="max-w-6xl mx-auto">
-        {/* Compact Header Section */}
+        {/* Header Section with Inline Today Widget */}
         <div className="text-center px-2 mb-3 sm:mb-4">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
             Pool Schedule
           </h1>
-          <p className="text-gray-600 text-sm">Highlands Recreation Center</p>
-
-          {/* Compact Navigation & Refresh */}
+          <p className="text-gray-600 text-sm mb-3">Highlands Recreation Center</p>
+          
+          {/* Inline Today Widget */}
+          <div className="flex justify-center mb-2">
+            <TodayHighlight
+              poolData={todayData}
+              loading={todayLoading}
+              error={todayError}
+              currentTime={currentTime}
+              onRefresh={fetchTodayData}
+              compact={true}
+            />
+          </div>
         </div>
-
-        {/* Today's Highlight Section */}
-        <section className="px-2 mb-4 animate-fade-in">
-          <TodayHighlight
-            poolData={todayData}
-            loading={todayLoading}
-            error={todayError}
-            currentTime={currentTime}
-            onRefresh={fetchTodayData}
-          />
-        </section>
 
         {/* This Week Section */}
         <section className="mb-4 animate-fade-in">
