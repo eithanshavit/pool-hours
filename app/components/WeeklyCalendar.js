@@ -14,6 +14,7 @@ import DayColumn from "./DayColumn";
  * @param {number} props.weekOffset - Week offset (0 = this week, 1 = next week)
  * @param {string} props.weekStartDate - Start date of the week (YYYY-MM-DD)
  * @param {string} props.weekEndDate - End date of the week (YYYY-MM-DD)
+ * @param {Object} props.globalNextOpening - Global next opening information across all weeks
  * @returns {JSX.Element}
  */
 export default function WeeklyCalendar({
@@ -25,42 +26,55 @@ export default function WeeklyCalendar({
   weekOffset = 0,
   weekStartDate = null,
   weekEndDate = null,
+  globalNextOpening = null,
 }) {
-  // Find the next opening slot across all days in the week
-  const findNextOpeningInWeek = () => {
-    if (!weekData || weekData.length === 0) return null;
+  // Use global next opening information if available, otherwise fall back to local calculation
+  const nextOpeningInfo = (() => {
+    // If we have global next opening info and it's for this week, use it
+    if (globalNextOpening && globalNextOpening.weekOffset === weekOffset) {
+      return {
+        slot: globalNextOpening.slot,
+        dayIndex: globalNextOpening.dayIndex,
+      };
+    }
 
-    let nextSlot = null;
-    let nextSlotDayIndex = -1;
+    // If no global info available, fall back to local calculation for current week only
+    if (weekOffset === 0) {
+      if (!weekData || weekData.length === 0) return null;
 
-    // Check each day for the next opening
-    weekData.forEach((dayData, dayIndex) => {
-      if (!dayData?.hours || dayData.hours.length === 0) return;
+      let nextSlot = null;
+      let nextSlotDayIndex = -1;
 
-      // Sort slots by start time for this day
-      const sortedSlots = [...dayData.hours].sort(
-        (a, b) => new Date(a.start) - new Date(b.start)
-      );
+      // Check each day for the next opening
+      weekData.forEach((dayData, dayIndex) => {
+        if (!dayData?.hours || dayData.hours.length === 0) return;
 
-      // Find the first slot that starts after current time
-      const dayNextSlot = sortedSlots.find(
-        (slot) => new Date(slot.start) > currentTime
-      );
+        // Sort slots by start time for this day
+        const sortedSlots = [...dayData.hours].sort(
+          (a, b) => new Date(a.start) - new Date(b.start)
+        );
 
-      // If we found a slot and it's earlier than our current best, update it
-      if (
-        dayNextSlot &&
-        (!nextSlot || new Date(dayNextSlot.start) < new Date(nextSlot.start))
-      ) {
-        nextSlot = dayNextSlot;
-        nextSlotDayIndex = dayIndex;
-      }
-    });
+        // Find the first slot that starts after current time
+        const dayNextSlot = sortedSlots.find(
+          (slot) => new Date(slot.start) > currentTime
+        );
 
-    return { slot: nextSlot, dayIndex: nextSlotDayIndex };
-  };
+        // If we found a slot and it's earlier than our current best, update it
+        if (
+          dayNextSlot &&
+          (!nextSlot || new Date(dayNextSlot.start) < new Date(nextSlot.start))
+        ) {
+          nextSlot = dayNextSlot;
+          nextSlotDayIndex = dayIndex;
+        }
+      });
 
-  const nextOpeningInfo = findNextOpeningInWeek();
+      return nextSlot ? { slot: nextSlot, dayIndex: nextSlotDayIndex } : null;
+    }
+
+    // For future weeks without global info, don't show next indicators
+    return null;
+  })();
 
   const formatWeekHeader = () => {
     if (!weekStartDate || !weekEndDate) {

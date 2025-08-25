@@ -37,8 +37,8 @@ export default function CombinedCalendarView({ currentTime }) {
 
       // Get today's date in client timezone
       const today = new Date();
-      const todayStr = today.toLocaleDateString('en-CA'); // YYYY-MM-DD format
-      
+      const todayStr = today.toLocaleDateString("en-CA"); // YYYY-MM-DD format
+
       const response = await fetch(`/api/pool-hours?date=${todayStr}`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -62,9 +62,11 @@ export default function CombinedCalendarView({ currentTime }) {
 
       // Get client timezone
       const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      
+
       const response = await fetch(
-        `/api/weekly-hours?weekOffset=${weekOffset}&timezone=${encodeURIComponent(clientTimezone)}`
+        `/api/weekly-hours?weekOffset=${weekOffset}&timezone=${encodeURIComponent(
+          clientTimezone
+        )}`
       );
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -90,14 +92,68 @@ export default function CombinedCalendarView({ currentTime }) {
     fetchWeeklyData(1, setNextWeekData, setNextWeekLoading, setNextWeekError);
   };
 
-
-
   // Initial data fetch
   useEffect(() => {
     fetchTodayData();
     fetchThisWeekData();
     fetchNextWeekData();
   }, []);
+
+  // Calculate global next opening across both weeks
+  const findGlobalNextOpening = () => {
+    // Only calculate if we have data for both weeks
+    if (!thisWeekData?.weekData || !nextWeekData?.weekData) {
+      return null;
+    }
+    
+    const allSlots = [];
+    
+    // Collect all future slots from both weeks
+    thisWeekData.weekData.forEach((dayData, dayIndex) => {
+      if (dayData?.hours) {
+        dayData.hours.forEach(slot => {
+          if (new Date(slot.start) > currentTime) {
+            allSlots.push({
+              ...slot,
+              weekOffset: 0,
+              dayIndex,
+              dayData
+            });
+          }
+        });
+      }
+    });
+    
+    nextWeekData.weekData.forEach((dayData, dayIndex) => {
+      if (dayData?.hours) {
+        dayData.hours.forEach(slot => {
+          if (new Date(slot.start) > currentTime) {
+            allSlots.push({
+              ...slot,
+              weekOffset: 1,
+              dayIndex,
+              dayData
+            });
+          }
+        });
+      }
+    });
+    
+    // Find the earliest slot
+    if (allSlots.length === 0) return null;
+    
+    const earliestSlot = allSlots.reduce((earliest, current) => {
+      return new Date(current.start) < new Date(earliest.start) ? current : earliest;
+    });
+    
+    return {
+      slot: earliestSlot,
+      weekOffset: earliestSlot.weekOffset,
+      dayIndex: earliestSlot.dayIndex
+    };
+  };
+
+  const globalNextOpening = findGlobalNextOpening();
 
   // Auto-refresh every 5 minutes
   useEffect(() => {
@@ -118,8 +174,10 @@ export default function CombinedCalendarView({ currentTime }) {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
             Pool Schedule
           </h1>
-          <p className="text-gray-600 text-sm mb-3">Highlands Recreation Center</p>
-          
+          <p className="text-gray-600 text-sm mb-3">
+            Highlands Recreation Center
+          </p>
+
           {/* Inline Today Widget */}
           <div className="flex justify-center mb-2">
             <TodayHighlight
@@ -144,6 +202,7 @@ export default function CombinedCalendarView({ currentTime }) {
             weekOffset={0}
             weekStartDate={thisWeekData?.weekStartDate}
             weekEndDate={thisWeekData?.weekEndDate}
+            globalNextOpening={globalNextOpening}
           />
         </section>
 
@@ -158,6 +217,7 @@ export default function CombinedCalendarView({ currentTime }) {
             weekOffset={1}
             weekStartDate={nextWeekData?.weekStartDate}
             weekEndDate={nextWeekData?.weekEndDate}
+            globalNextOpening={globalNextOpening}
           />
         </section>
 
